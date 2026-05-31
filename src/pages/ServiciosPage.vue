@@ -2,33 +2,14 @@
   <q-page class="servicios-page q-pa-md">
     <div class="page-header q-mb-md">
       <div>
-        <div class="text-h4 text-weight-bold title-responsive">
-          🏃 Servicios
-        </div>
-        <div class="text-grey-7">
-          Planes, combos y precios de CarlaFit
-        </div>
+        <div class="text-h4 text-weight-bold title-responsive">🏃 Servicios</div>
+        <div class="text-grey-7">Planes, combos y precios de CarlaFit</div>
       </div>
 
-      <q-btn
-        class="btn-primary"
-        icon="add"
-        label="Nuevo Servicio"
-        unelevated
-        rounded
-        @click="abrirDialogCrear"
-      />
+      <q-btn class="btn-primary" icon="add" label="Nuevo Servicio" unelevated rounded @click="abrirDialogCrear" />
     </div>
 
-    <q-input
-      v-model="filtro"
-      outlined
-      dense
-      clearable
-      debounce="300"
-      placeholder="Buscar servicio..."
-      class="search-box q-mb-md"
-    >
+    <q-input v-model="filtro" outlined dense clearable debounce="300" placeholder="Buscar servicio..." class="search-box q-mb-md">
       <template v-slot:prepend>
         <q-icon name="search" />
       </template>
@@ -46,56 +27,35 @@
     >
       <template v-slot:item="props">
         <div class="q-pa-xs col-12">
-          <q-card class="mobile-card">
-            <q-card-section>
-              <div class="row items-start justify-between">
-                <div>
-                  <div class="mobile-title">{{ props.row.nombre }}</div>
-                  <div class="text-grey-7">{{ props.row.descripcion }}</div>
-                </div>
+          <q-card class="service-card">
+            <div class="service-top" :class="tipoClase(props.row.tipo)">
+              <div class="service-icon">{{ tipoIcono(props.row.tipo) }}</div>
+              <div>
+                <div class="service-name">{{ props.row.nombre }}</div>
+                <div class="service-type">{{ props.row.tipo }}</div>
+              </div>
+              <q-space />
+              <q-badge :color="props.row.activo ? 'positive' : 'negative'">
+                {{ props.row.activo ? 'Activo' : 'Inactivo' }}
+              </q-badge>
+            </div>
 
-                <q-badge :color="props.row.activo ? 'positive' : 'negative'">
-                  {{ props.row.activo ? 'Activo' : 'Inactivo' }}
-                </q-badge>
+            <q-card-section>
+              <div class="service-description">
+                {{ props.row.descripcion || 'Sin descripción' }}
               </div>
 
-              <div class="row q-col-gutter-sm q-mt-md">
-                <div class="col-6">
-                  <div class="info-label">Precio</div>
-                  <q-badge color="green" outline class="q-mt-xs">
-                    Bs {{ formatoMonto(props.row.precio) }}
-                  </q-badge>
-                </div>
-
-                <div class="col-6">
-                  <div class="info-label">Tipo</div>
-                  <div class="info-value">{{ props.row.tipo }}</div>
-                </div>
+              <div class="price-box q-mt-md">
+                <div class="info-label">Precio</div>
+                <div class="price-text">Bs {{ formatoMonto(props.row.precio) }}</div>
               </div>
             </q-card-section>
 
             <q-separator />
 
             <q-card-actions align="right" class="q-pa-sm">
-              <q-btn
-                class="btn-edit"
-                icon="edit"
-                label="Editar"
-                dense
-                unelevated
-                rounded
-                @click="abrirDialogEditar(props.row)"
-              />
-
-              <q-btn
-                class="btn-delete"
-                icon="delete"
-                label="Eliminar"
-                dense
-                unelevated
-                rounded
-                @click="confirmarEliminar(props.row)"
-              />
+              <q-btn class="btn-edit" icon="edit" label="Editar" dense unelevated rounded @click="abrirDialogEditar(props.row)" />
+              <q-btn class="btn-delete" icon="delete" label="Eliminar" dense unelevated rounded @click="confirmarEliminar(props.row)" />
             </q-card-actions>
           </q-card>
         </div>
@@ -103,9 +63,7 @@
 
       <template v-slot:body-cell-precio="props">
         <q-td :props="props">
-          <q-badge color="green" outline>
-            Bs {{ formatoMonto(props.row.precio) }}
-          </q-badge>
+          <q-badge color="green" outline>Bs {{ formatoMonto(props.row.precio) }}</q-badge>
         </q-td>
       </template>
 
@@ -132,9 +90,7 @@
             <div class="text-h6 text-weight-bold">
               {{ modoEditar ? 'Editar Servicio' : 'Registrar Servicio' }}
             </div>
-            <div class="text-caption text-purple-1">
-              Completa los datos del plan
-            </div>
+            <div class="text-caption text-purple-1">Completa los datos del plan</div>
           </div>
 
           <q-btn flat round dense icon="close" color="white" v-close-popup />
@@ -142,21 +98,9 @@
 
         <q-card-section class="form-body">
           <q-input v-model="form.nombre" label="Nombre del servicio" outlined dense class="q-mb-sm" />
-
           <q-input v-model.number="form.precio" label="Precio" type="number" outlined dense class="q-mb-sm" />
-
           <q-select v-model="form.tipo" :options="tipos" label="Tipo" outlined dense class="q-mb-sm" />
-
-          <q-input
-            v-model="form.descripcion"
-            label="Descripción"
-            type="textarea"
-            outlined
-            dense
-            autogrow
-            class="q-mb-sm"
-          />
-
+          <q-input v-model="form.descripcion" label="Descripción" type="textarea" outlined dense autogrow class="q-mb-sm" />
           <q-toggle v-model="form.activo" label="Servicio activo" color="purple" />
         </q-card-section>
 
@@ -202,8 +146,18 @@ const columns = [
   { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'center' }
 ]
 
-const formatoMonto = (valor) => {
-  return Number(valor || 0).toFixed(2)
+const formatoMonto = (valor) => Number(valor || 0).toFixed(2)
+
+const tipoIcono = (tipo) => {
+  if (tipo === 'combo') return '🔥'
+  if (tipo === 'mensual') return '📅'
+  return '⚡'
+}
+
+const tipoClase = (tipo) => {
+  if (tipo === 'combo') return 'combo'
+  if (tipo === 'mensual') return 'mensual'
+  return 'diario'
 }
 
 const cargarServicios = async () => {
@@ -307,15 +261,57 @@ onMounted(cargarServicios)
   border-radius: 14px;
 }
 
-.mobile-card {
-  border-radius: 18px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+.service-card {
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
 }
 
-.mobile-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: #4a148c;
+.service-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: white;
+}
+
+.service-top.combo {
+  background: linear-gradient(135deg, #6a1b9a, #ab47bc);
+}
+
+.service-top.mensual {
+  background: linear-gradient(135deg, #1565c0, #42a5f5);
+}
+
+.service-top.diario {
+  background: linear-gradient(135deg, #0b8f3a, #43a047);
+}
+
+.service-icon {
+  font-size: 34px;
+}
+
+.service-name {
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.service-type {
+  text-transform: uppercase;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.service-description {
+  color: #555;
+  font-size: 15px;
+}
+
+.price-box {
+  background: #f1f8e9;
+  border: 1px solid #c5e1a5;
+  border-radius: 16px;
+  padding: 12px;
 }
 
 .info-label {
@@ -324,10 +320,10 @@ onMounted(cargarServicios)
   font-weight: 700;
 }
 
-.info-value {
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 4px;
+.price-text {
+  color: #1b5e20;
+  font-size: 25px;
+  font-weight: 900;
 }
 
 .form-card {
