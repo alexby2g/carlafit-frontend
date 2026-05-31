@@ -44,10 +44,67 @@
       :filter="filtro"
       :grid="$q.screen.lt.md"
     >
+      <template v-slot:item="props">
+        <div class="q-pa-xs col-12">
+          <q-card class="mobile-card">
+            <q-card-section>
+              <div class="row items-start justify-between">
+                <div>
+                  <div class="mobile-title">{{ props.row.nombre }}</div>
+                  <div class="text-grey-7">{{ props.row.descripcion }}</div>
+                </div>
+
+                <q-badge :color="props.row.activo ? 'positive' : 'negative'">
+                  {{ props.row.activo ? 'Activo' : 'Inactivo' }}
+                </q-badge>
+              </div>
+
+              <div class="row q-col-gutter-sm q-mt-md">
+                <div class="col-6">
+                  <div class="info-label">Precio</div>
+                  <q-badge color="green" outline class="q-mt-xs">
+                    Bs {{ formatoMonto(props.row.precio) }}
+                  </q-badge>
+                </div>
+
+                <div class="col-6">
+                  <div class="info-label">Tipo</div>
+                  <div class="info-value">{{ props.row.tipo }}</div>
+                </div>
+              </div>
+            </q-card-section>
+
+            <q-separator />
+
+            <q-card-actions align="right" class="q-pa-sm">
+              <q-btn
+                class="btn-edit"
+                icon="edit"
+                label="Editar"
+                dense
+                unelevated
+                rounded
+                @click="abrirDialogEditar(props.row)"
+              />
+
+              <q-btn
+                class="btn-delete"
+                icon="delete"
+                label="Eliminar"
+                dense
+                unelevated
+                rounded
+                @click="confirmarEliminar(props.row)"
+              />
+            </q-card-actions>
+          </q-card>
+        </div>
+      </template>
+
       <template v-slot:body-cell-precio="props">
         <q-td :props="props">
           <q-badge color="green" outline>
-            Bs {{ props.row.precio }}
+            Bs {{ formatoMonto(props.row.precio) }}
           </q-badge>
         </q-td>
       </template>
@@ -145,6 +202,10 @@ const columns = [
   { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'center' }
 ]
 
+const formatoMonto = (valor) => {
+  return Number(valor || 0).toFixed(2)
+}
+
 const cargarServicios = async () => {
   const res = await axios.get(API_URL)
   servicios.value = res.data.data
@@ -231,9 +292,42 @@ onMounted(cargarServicios)
   box-shadow: 0 8px 18px rgba(123, 31, 162, 0.35);
 }
 
+.btn-edit {
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  color: white;
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #d32f2f, #ef5350);
+  color: white;
+}
+
 .search-box {
   background: white;
   border-radius: 14px;
+}
+
+.mobile-card {
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #4a148c;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #777;
+  font-weight: 700;
+}
+
+.info-value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 4px;
 }
 
 .form-card {
