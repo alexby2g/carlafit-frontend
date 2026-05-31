@@ -2,12 +2,8 @@
   <q-page class="inscripciones-page q-pa-md">
     <div class="page-header q-mb-md">
       <div>
-        <div class="text-h4 text-weight-bold title-responsive">
-          📅 Inscripciones
-        </div>
-        <div class="text-grey-7">
-          Registro de zumberas, servicios y grupos
-        </div>
+        <div class="text-h4 text-weight-bold title-responsive">📅 Inscripciones</div>
+        <div class="text-grey-7">Registro de zumberas, servicios y grupos</div>
       </div>
 
       <q-btn
@@ -44,6 +40,65 @@
       :filter="filtro"
       :grid="$q.screen.lt.md"
     >
+      <template v-slot:item="props">
+        <div class="q-pa-xs col-12">
+          <q-card class="inscription-card">
+            <div class="inscription-top">
+              <div class="inscription-icon">📅</div>
+              <div>
+                <div class="inscription-name">
+                  {{ props.row.zumbera?.nombre || 'Sin nombre' }}
+                </div>
+                <div class="inscription-service">
+                  {{ props.row.servicio?.nombre || 'Sin servicio' }}
+                </div>
+              </div>
+              <q-space />
+              <q-badge :color="colorEstado(props.row.estado)">
+                {{ props.row.estado }}
+              </q-badge>
+            </div>
+
+            <q-card-section>
+              <div class="row q-col-gutter-sm">
+                <div class="col-12">
+                  <div class="mini-box">
+                    <div class="info-label">Grupo / Horario</div>
+                    <div class="info-value">
+                      {{ props.row.grupo?.nombre || 'Sin grupo' }}
+                    </div>
+                    <div class="text-grey-7">
+                      ⏰ {{ limpiarHora(props.row.grupo?.hora_inicio) }} - {{ limpiarHora(props.row.grupo?.hora_fin) }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-6">
+                  <div class="mini-box green-box">
+                    <div class="info-label">Inicio</div>
+                    <div class="info-value">{{ props.row.fecha_inicio || 'Sin fecha' }}</div>
+                  </div>
+                </div>
+
+                <div class="col-6">
+                  <div class="mini-box blue-box">
+                    <div class="info-label">Fin</div>
+                    <div class="info-value">{{ props.row.fecha_fin || 'Sin fecha' }}</div>
+                  </div>
+                </div>
+              </div>
+            </q-card-section>
+
+            <q-separator />
+
+            <q-card-actions align="right" class="q-pa-sm">
+              <q-btn class="btn-edit" icon="edit" label="Editar" dense unelevated rounded @click="abrirDialogEditar(props.row)" />
+              <q-btn class="btn-delete" icon="delete" label="Eliminar" dense unelevated rounded @click="confirmarEliminar(props.row)" />
+            </q-card-actions>
+          </q-card>
+        </div>
+      </template>
+
       <template v-slot:body-cell-zumbera="props">
         <q-td :props="props">
           {{ props.row.zumbera?.nombre || 'Sin nombre' }}
@@ -86,7 +141,7 @@
               {{ modoEditar ? 'Editar Inscripción' : 'Registrar Inscripción' }}
             </div>
             <div class="text-caption text-purple-1">
-              Asigna zumbera, servicio y grupo
+              Selecciona alumna, servicio y horario
             </div>
           </div>
 
@@ -116,6 +171,12 @@
             class="q-mb-sm"
           />
 
+          <div v-if="servicioSeleccionado" class="summary-box service-summary q-mb-sm">
+            <div class="summary-title">🏃 {{ servicioSeleccionado.nombre }}</div>
+            <div class="text-grey-8">{{ servicioSeleccionado.descripcion }}</div>
+            <div class="summary-price">💰 Bs {{ formatoMonto(servicioSeleccionado.precio) }}</div>
+          </div>
+
           <q-select
             v-model="form.grupo_id"
             :options="gruposOptions"
@@ -127,42 +188,40 @@
             class="q-mb-sm"
           />
 
-          <div class="row q-col-gutter-sm">
-            <div class="col-12 col-sm-6">
-              <q-input
-                v-model="form.fecha_inicio"
-                label="Fecha inicio"
-                type="date"
-                outlined
-                dense
-                class="q-mb-sm"
-              />
+          <div v-if="grupoSeleccionado" class="summary-box group-summary q-mb-sm">
+            <div class="summary-title">⏰ {{ grupoSeleccionado.nombre }}</div>
+            <div class="text-grey-8">
+              {{ limpiarHora(grupoSeleccionado.hora_inicio) }} - {{ limpiarHora(grupoSeleccionado.hora_fin) }}
             </div>
-
-            <div class="col-12 col-sm-6">
-              <q-input
-                v-model="form.fecha_fin"
-                label="Fecha fin"
-                type="date"
-                outlined
-                dense
-                class="q-mb-sm"
-              />
+            <div class="text-grey-8">
+              Cupo máximo: {{ grupoSeleccionado.cupo_maximo }}
             </div>
           </div>
 
-          <q-select
-            v-model="form.estado"
-            :options="estados"
-            label="Estado"
-            outlined
-            dense
-          />
+          <div class="row q-col-gutter-sm">
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.fecha_inicio" label="Fecha inicio" type="date" outlined dense class="q-mb-sm" />
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.fecha_fin" label="Fecha fin" type="date" outlined dense class="q-mb-sm" />
+            </div>
+          </div>
+
+          <q-select v-model="form.estado" :options="estados" label="Estado" outlined dense class="q-mb-sm" />
+
+          <div v-if="resumenActivo" class="final-summary">
+            <div class="final-title">Resumen de inscripción</div>
+            <div>👤 {{ zumberaSeleccionada?.nombre || 'Sin zumbera' }}</div>
+            <div>🏃 {{ servicioSeleccionado?.nombre || 'Sin servicio' }}</div>
+            <div>⏰ {{ grupoSeleccionado?.nombre || 'Sin grupo' }}</div>
+            <div>💰 Bs {{ formatoMonto(servicioSeleccionado?.precio) }}</div>
+          </div>
         </q-card-section>
 
         <q-card-actions class="form-actions">
           <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
-          <q-btn class="btn-save" icon="save" label="Guardar" unelevated rounded @click="guardar" />
+          <q-btn class="btn-save" icon="save" label="Guardar Inscripción" unelevated rounded @click="guardar" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -221,16 +280,32 @@ const zumberasOptions = computed(() =>
 
 const serviciosOptions = computed(() =>
   servicios.value.map(s => ({
-    label: `${s.nombre} - Bs ${s.precio}`,
+    label: `${s.nombre} - Bs ${formatoMonto(s.precio)}`,
     value: s.id
   }))
 )
 
 const gruposOptions = computed(() =>
   grupos.value.map(g => ({
-    label: `${g.nombre} (${g.hora_inicio} - ${g.hora_fin})`,
+    label: `${g.nombre} (${limpiarHora(g.hora_inicio)} - ${limpiarHora(g.hora_fin)})`,
     value: g.id
   }))
+)
+
+const zumberaSeleccionada = computed(() =>
+  zumberas.value.find(z => z.id === form.value.zumbera_id) || null
+)
+
+const servicioSeleccionado = computed(() =>
+  servicios.value.find(s => s.id === form.value.servicio_id) || null
+)
+
+const grupoSeleccionado = computed(() =>
+  grupos.value.find(g => g.id === form.value.grupo_id) || null
+)
+
+const resumenActivo = computed(() =>
+  form.value.zumbera_id && form.value.servicio_id && form.value.grupo_id
 )
 
 const cargarDatos = async () => {
@@ -248,6 +323,15 @@ const cargarDatos = async () => {
 }
 
 const hoy = () => new Date().toISOString().slice(0, 10)
+
+const limpiarHora = (hora) => {
+  if (!hora) return ''
+  return hora.substring(0, 5)
+}
+
+const formatoMonto = (valor) => {
+  return Number(valor || 0).toFixed(2)
+}
 
 const colorEstado = (estado) => {
   if (estado === 'activo') return 'positive'
@@ -370,9 +454,109 @@ onMounted(cargarDatos)
   box-shadow: 0 8px 18px rgba(123, 31, 162, 0.35);
 }
 
+.btn-edit {
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  color: white;
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #d32f2f, #ef5350);
+  color: white;
+}
+
 .search-box {
   background: white;
   border-radius: 14px;
+}
+
+.inscription-card {
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
+}
+
+.inscription-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: white;
+  background: linear-gradient(135deg, #6a1b9a, #ab47bc);
+}
+
+.inscription-icon {
+  font-size: 34px;
+}
+
+.inscription-name {
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.inscription-service {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.mini-box,
+.summary-box,
+.final-summary {
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.mini-box {
+  background: #f3e5f5;
+  border: 1px solid #ce93d8;
+}
+
+.green-box,
+.service-summary {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+}
+
+.blue-box,
+.group-summary {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #777;
+  font-weight: 700;
+}
+
+.info-value {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.summary-title {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.summary-price {
+  margin-top: 4px;
+  font-weight: 900;
+  color: #1b5e20;
+}
+
+.final-summary {
+  background: linear-gradient(135deg, #f3e5f5, #ffffff);
+  border: 1px solid #ce93d8;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.final-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #6a1b9a;
+  margin-bottom: 4px;
 }
 
 .form-card {
