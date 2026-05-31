@@ -1,13 +1,13 @@
 <template>
   <q-page class="dashboard-page q-pa-md">
     <div class="hero-card q-pa-lg q-mb-md">
-      <div class="row items-center justify-between q-col-gutter-md">
+      <div class="hero-content">
         <div>
-          <div class="text-h4 text-weight-bold text-white">
+          <div class="text-h4 text-weight-bold text-white title-responsive">
             📊 Dashboard CarlaFit
           </div>
           <div class="text-subtitle1 text-purple-1">
-            Sistema de Gestión de Clases, Pagos, Asistencia y Bienestar
+            Gestión de clases, pagos, asistencia y bienestar
           </div>
         </div>
 
@@ -24,134 +24,128 @@
       </div>
     </div>
 
-    <q-banner
-      v-if="error"
-      class="bg-red-1 text-red-9 q-mb-md"
-      rounded
-    >
+    <q-banner v-if="error" class="bg-red-1 text-red-9 q-mb-md" rounded>
       {{ error }}
     </q-banner>
 
     <div class="row q-col-gutter-md">
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card class="stat-card purple-card">
+        <q-card class="premium-card purple-card">
           <div>
-            <div class="stat-label">Zumberas Totales</div>
-            <div class="stat-number">{{ dashboard.total_zumberas }}</div>
-            <div class="stat-caption">Registradas en el sistema</div>
+            <div class="card-label">Zumberas</div>
+            <div class="card-number">{{ dashboard.total_zumberas }}</div>
+            <div class="card-caption">Registradas</div>
           </div>
-          <q-icon name="groups" class="stat-icon" />
+          <q-icon name="groups" class="card-icon" />
         </q-card>
       </div>
 
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card class="stat-card green-card">
+        <q-card class="premium-card green-card">
           <div>
-            <div class="stat-label">Zumberas Activas</div>
-            <div class="stat-number">{{ dashboard.zumberas_activas }}</div>
-            <div class="stat-caption">Activas actualmente</div>
+            <div class="card-label">Activas</div>
+            <div class="card-number">{{ dashboard.zumberas_activas }}</div>
+            <div class="card-caption">Actualmente</div>
           </div>
-          <q-icon name="verified" class="stat-icon" />
+          <q-icon name="verified" class="card-icon" />
         </q-card>
       </div>
 
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card class="stat-card blue-card">
+        <q-card class="premium-card blue-card">
           <div>
-            <div class="stat-label">Inscripciones</div>
-            <div class="stat-number">{{ dashboard.inscripciones_activas }}</div>
-            <div class="stat-caption">Inscripciones vigentes</div>
+            <div class="card-label">Inscripciones</div>
+            <div class="card-number">{{ dashboard.inscripciones_activas }}</div>
+            <div class="card-caption">Vigentes</div>
           </div>
-          <q-icon name="event_available" class="stat-icon" />
+          <q-icon name="event_available" class="card-icon" />
         </q-card>
       </div>
 
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card class="stat-card orange-card">
+        <q-card class="premium-card orange-card">
           <div>
-            <div class="stat-label">Pagos Pendientes</div>
-            <div class="stat-number">{{ dashboard.pagos_pendientes }}</div>
-            <div class="stat-caption">Por cobrar</div>
+            <div class="card-label">Pendientes</div>
+            <div class="card-number">{{ dashboard.pagos_pendientes }}</div>
+            <div class="card-caption">Pagos por cobrar</div>
           </div>
-          <q-icon name="warning" class="stat-icon" />
+          <q-icon name="warning" class="card-icon" />
         </q-card>
       </div>
     </div>
 
     <div class="row q-col-gutter-md q-mt-sm">
-      <div class="col-12 col-sm-4">
-        <q-card class="attendance-card attendance-total">
+      <div class="col-12 col-md-4">
+        <q-card class="money-card money-green">
           <div>
-            <div class="attendance-label">Asistencias Hoy</div>
+            <div class="money-label">Ingresos de Hoy</div>
+            <div class="money-number">Bs {{ formatoMonto(dashboard.ingresos_hoy) }}</div>
+            <div class="money-caption">Recaudado hoy</div>
+          </div>
+          <q-icon name="paid" class="money-icon" />
+        </q-card>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <q-card class="money-card money-purple">
+          <div>
+            <div class="money-label">Ingresos del Mes</div>
+            <div class="money-number">Bs {{ formatoMonto(dashboard.ingresos_mes) }}</div>
+            <div class="money-caption">Recaudado este mes</div>
+          </div>
+          <q-icon name="payments" class="money-icon" />
+        </q-card>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <q-card class="money-card money-blue">
+          <div>
+            <div class="money-label">Ingresos del Año</div>
+            <div class="money-number">Bs {{ formatoMonto(dashboard.ingresos_anio) }}</div>
+            <div class="money-caption">Recaudado este año</div>
+          </div>
+          <q-icon name="account_balance_wallet" class="money-icon" />
+        </q-card>
+      </div>
+    </div>
+
+    <div class="row q-col-gutter-md q-mt-sm">
+      <div class="col-12 col-md-4">
+        <q-card class="attendance-box total">
+          <q-icon name="fact_check" />
+          <div>
+            <div class="attendance-title">Asistencias Hoy</div>
             <div class="attendance-number">{{ dashboard.asistencias_hoy }}</div>
-            <div class="attendance-caption">Registros del día</div>
           </div>
-          <q-icon name="fact_check" class="attendance-icon" />
         </q-card>
       </div>
 
-      <div class="col-12 col-sm-4">
-        <q-card class="attendance-card attendance-present">
+      <div class="col-12 col-md-4">
+        <q-card class="attendance-box present">
+          <q-icon name="check_circle" />
           <div>
-            <div class="attendance-label">Presentes Hoy</div>
+            <div class="attendance-title">Presentes</div>
             <div class="attendance-number">{{ dashboard.presentes_hoy }}</div>
-            <div class="attendance-caption">Zumberas presentes</div>
           </div>
-          <q-icon name="check_circle" class="attendance-icon" />
         </q-card>
       </div>
 
-      <div class="col-12 col-sm-4">
-        <q-card class="attendance-card attendance-absent">
+      <div class="col-12 col-md-4">
+        <q-card class="attendance-box absent">
+          <q-icon name="cancel" />
           <div>
-            <div class="attendance-label">Ausentes Hoy</div>
+            <div class="attendance-title">Ausentes</div>
             <div class="attendance-number">{{ dashboard.ausentes_hoy }}</div>
-            <div class="attendance-caption">Zumberas ausentes</div>
           </div>
-          <q-icon name="cancel" class="attendance-icon" />
         </q-card>
       </div>
     </div>
 
-    <div class="row q-col-gutter-md q-mt-sm">
-      <div class="col-12 col-md-4">
-        <q-card class="income-card income-green">
-          <div>
-            <div class="income-label">Ingresos de Hoy</div>
-            <div class="income-number">Bs {{ formatoMonto(dashboard.ingresos_hoy) }}</div>
-            <div class="income-caption">Total recaudado hoy</div>
-          </div>
-          <q-icon name="paid" class="income-icon" />
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-4">
-        <q-card class="income-card income-purple">
-          <div>
-            <div class="income-label">Ingresos del Mes</div>
-            <div class="income-number">Bs {{ formatoMonto(dashboard.ingresos_mes) }}</div>
-            <div class="income-caption">Total recaudado este mes</div>
-          </div>
-          <q-icon name="payments" class="income-icon" />
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-4">
-        <q-card class="income-card income-blue">
-          <div>
-            <div class="income-label">Ingresos del Año</div>
-            <div class="income-number">Bs {{ formatoMonto(dashboard.ingresos_anio) }}</div>
-            <div class="income-caption">Total recaudado este año</div>
-          </div>
-          <q-icon name="account_balance_wallet" class="income-icon" />
-        </q-card>
-      </div>
-    </div>
-
-    <q-card class="group-card q-mt-md">
+    <q-card class="groups-card q-mt-md">
       <div class="row items-center justify-between q-mb-md">
-        <div class="text-h6 text-weight-bold">
-          👥 Personas por grupo
+        <div>
+          <div class="text-h6 text-weight-bold">👥 Personas por grupo</div>
+          <div class="text-grey-7">Resumen de inscritas por horario</div>
         </div>
 
         <q-badge color="purple" outline>
@@ -176,7 +170,7 @@
               {{ grupo.nombre }}
             </q-item-label>
             <q-item-label caption>
-              {{ grupo.hora_inicio }} - {{ grupo.hora_fin }}
+              ⏰ {{ limpiarHora(grupo.hora_inicio) }} - {{ limpiarHora(grupo.hora_fin) }}
             </q-item-label>
           </q-item-section>
 
@@ -195,7 +189,7 @@
       </q-list>
     </q-card>
 
-    <div class="text-center text-grey-6 q-mt-lg">
+    <div class="footer-text">
       💜 CarlaFit — Confía en el proceso, disfruta el cambio.
     </div>
   </q-page>
@@ -247,9 +241,12 @@ const formatoMonto = (valor) => {
   return Number(valor || 0).toFixed(2)
 }
 
-onMounted(() => {
-  cargarDashboard()
-})
+const limpiarHora = (hora) => {
+  if (!hora) return ''
+  return hora.substring(0, 5)
+}
+
+onMounted(cargarDashboard)
 </script>
 
 <style scoped>
@@ -259,124 +256,188 @@ onMounted(() => {
 }
 
 .hero-card {
-  border-radius: 24px;
-  background: linear-gradient(135deg, #6a1b9a, #9c27b0, #ba68c8);
-  box-shadow: 0 12px 28px rgba(106, 27, 154, 0.25);
+  border-radius: 28px;
+  background: linear-gradient(135deg, #4a148c, #8e24aa, #ce93d8);
+  box-shadow: 0 14px 32px rgba(106, 27, 154, 0.28);
 }
 
-.stat-card,
-.income-card,
-.attendance-card {
+.hero-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.premium-card,
+.money-card {
   min-height: 145px;
-  border-radius: 22px;
+  border-radius: 24px;
   padding: 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+  background: white;
 }
 
-.stat-card {
-  border-bottom: 5px solid;
-}
-
-.stat-label,
-.income-label,
-.attendance-label {
+.card-label,
+.money-label {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.stat-number,
-.attendance-number {
-  font-size: 34px;
-  font-weight: 800;
-  margin-top: 6px;
+.card-number {
+  font-size: 36px;
+  font-weight: 900;
+  margin-top: 5px;
 }
 
-.income-number {
+.money-number {
   font-size: 28px;
-  font-weight: 800;
-  margin-top: 8px;
-}
-
-.stat-caption,
-.income-caption,
-.attendance-caption {
-  font-size: 12px;
-  color: #777;
+  font-weight: 900;
   margin-top: 6px;
 }
 
-.stat-icon,
-.income-icon,
-.attendance-icon {
-  font-size: 54px;
-  opacity: 0.85;
+.card-caption,
+.money-caption {
+  color: #777;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.card-icon,
+.money-icon {
+  font-size: 56px;
+  opacity: 0.82;
 }
 
 .purple-card {
-  background: #ffffff;
-  border-color: #8e24aa;
+  border-bottom: 5px solid #8e24aa;
   color: #7b1fa2;
 }
 
 .green-card {
-  background: #ffffff;
-  border-color: #2e7d32;
+  border-bottom: 5px solid #2e7d32;
   color: #2e7d32;
 }
 
 .blue-card {
-  background: #ffffff;
-  border-color: #1565c0;
+  border-bottom: 5px solid #1565c0;
   color: #1565c0;
 }
 
 .orange-card {
-  background: #ffffff;
-  border-color: #fb8c00;
+  border-bottom: 5px solid #fb8c00;
   color: #ef6c00;
 }
 
-.attendance-total {
-  background: linear-gradient(135deg, #ede7f6, #ffffff);
-  color: #5e35b1;
-}
-
-.attendance-present {
-  background: linear-gradient(135deg, #e8f5e9, #ffffff);
-  color: #2e7d32;
-}
-
-.attendance-absent {
-  background: linear-gradient(135deg, #ffebee, #ffffff);
-  color: #c62828;
-}
-
-.income-green {
+.money-green {
   background: linear-gradient(135deg, #e8f5e9, #ffffff);
   color: #0b8f3a;
 }
 
-.income-purple {
+.money-purple {
   background: linear-gradient(135deg, #f3e5f5, #ffffff);
   color: #8e24aa;
 }
 
-.income-blue {
+.money-blue {
   background: linear-gradient(135deg, #e3f2fd, #ffffff);
   color: #1565c0;
 }
 
-.group-card {
+.attendance-box {
+  min-height: 110px;
   border-radius: 22px;
-  padding: 22px;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 
+.attendance-box .q-icon {
+  font-size: 46px;
+}
+
+.attendance-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.attendance-number {
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.total {
+  background: linear-gradient(135deg, #ede7f6, #ffffff);
+  color: #5e35b1;
+}
+
+.present {
+  background: linear-gradient(135deg, #e8f5e9, #ffffff);
+  color: #2e7d32;
+}
+
+.absent {
+  background: linear-gradient(135deg, #ffebee, #ffffff);
+  color: #c62828;
+}
+
+.groups-card {
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
 .group-item {
-  border-radius: 14px;
+  border-radius: 16px;
   margin-bottom: 4px;
+}
+
+.footer-text {
+  text-align: center;
+  color: #777;
+  margin-top: 26px;
+  padding-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-page {
+    padding: 10px;
+  }
+
+  .hero-card {
+    padding: 20px;
+  }
+
+  .hero-content {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .title-responsive {
+    font-size: 30px;
+  }
+
+  .premium-card,
+  .money-card {
+    min-height: 125px;
+    padding: 18px;
+  }
+
+  .card-number {
+    font-size: 32px;
+  }
+
+  .money-number {
+    font-size: 24px;
+  }
+
+  .card-icon,
+  .money-icon {
+    font-size: 46px;
+  }
 }
 </style>
