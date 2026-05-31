@@ -2,33 +2,14 @@
   <q-page class="grupos-page q-pa-md">
     <div class="page-header q-mb-md">
       <div>
-        <div class="text-h4 text-weight-bold title-responsive">
-          ⏰ Grupos
-        </div>
-        <div class="text-grey-7">
-          Horarios, cupos y grupos activos
-        </div>
+        <div class="text-h4 text-weight-bold title-responsive">⏰ Grupos</div>
+        <div class="text-grey-7">Horarios, cupos y grupos activos</div>
       </div>
 
-      <q-btn
-        class="btn-primary"
-        icon="add"
-        label="Nuevo Grupo"
-        unelevated
-        rounded
-        @click="abrirDialogCrear"
-      />
+      <q-btn class="btn-primary" icon="add" label="Nuevo Grupo" unelevated rounded @click="abrirDialogCrear" />
     </div>
 
-    <q-input
-      v-model="filtro"
-      outlined
-      dense
-      clearable
-      debounce="300"
-      placeholder="Buscar grupo..."
-      class="search-box q-mb-md"
-    >
+    <q-input v-model="filtro" outlined dense clearable debounce="300" placeholder="Buscar grupo..." class="search-box q-mb-md">
       <template v-slot:prepend>
         <q-icon name="search" />
       </template>
@@ -44,17 +25,60 @@
       :filter="filtro"
       :grid="$q.screen.lt.md"
     >
+      <template v-slot:item="props">
+        <div class="q-pa-xs col-12">
+          <q-card class="group-card">
+            <div class="group-top">
+              <div class="group-icon">⏰</div>
+              <div>
+                <div class="group-name">{{ props.row.nombre }}</div>
+                <div class="group-hour">
+                  {{ limpiarHora(props.row.hora_inicio) }} - {{ limpiarHora(props.row.hora_fin) }}
+                </div>
+              </div>
+              <q-space />
+              <q-badge :color="props.row.activo ? 'positive' : 'negative'">
+                {{ props.row.activo ? 'Activo' : 'Inactivo' }}
+              </q-badge>
+            </div>
+
+            <q-card-section>
+              <div class="row q-col-gutter-sm">
+                <div class="col-6">
+                  <div class="mini-box">
+                    <div class="info-label">Cupo máximo</div>
+                    <div class="info-number">{{ props.row.cupo_maximo }}</div>
+                  </div>
+                </div>
+
+                <div class="col-6">
+                  <div class="mini-box purple-box">
+                    <div class="info-label">Inscritas</div>
+                    <div class="info-number">{{ props.row.inscripciones_count || 0 }}</div>
+                  </div>
+                </div>
+              </div>
+            </q-card-section>
+
+            <q-separator />
+
+            <q-card-actions align="right" class="q-pa-sm">
+              <q-btn class="btn-edit" icon="edit" label="Editar" dense unelevated rounded @click="abrirDialogEditar(props.row)" />
+              <q-btn class="btn-delete" icon="delete" label="Eliminar" dense unelevated rounded @click="confirmarEliminar(props.row)" />
+            </q-card-actions>
+          </q-card>
+        </div>
+      </template>
+
       <template v-slot:body-cell-horario="props">
         <q-td :props="props">
-          {{ props.row.hora_inicio }} - {{ props.row.hora_fin }}
+          {{ limpiarHora(props.row.hora_inicio) }} - {{ limpiarHora(props.row.hora_fin) }}
         </q-td>
       </template>
 
       <template v-slot:body-cell-inscripciones_count="props">
         <q-td :props="props">
-          <q-badge color="purple">
-            {{ props.row.inscripciones_count }} inscritas
-          </q-badge>
+          <q-badge color="purple">{{ props.row.inscripciones_count || 0 }} inscritas</q-badge>
         </q-td>
       </template>
 
@@ -81,61 +105,27 @@
             <div class="text-h6 text-weight-bold">
               {{ modoEditar ? 'Editar Grupo' : 'Registrar Grupo' }}
             </div>
-            <div class="text-caption text-purple-1">
-              Configura horario y cupo máximo
-            </div>
+            <div class="text-caption text-purple-1">Configura horario y cupo máximo</div>
           </div>
 
           <q-btn flat round dense icon="close" color="white" v-close-popup />
         </q-card-section>
 
         <q-card-section class="form-body">
-          <q-input
-            v-model="form.nombre"
-            label="Nombre del grupo"
-            outlined
-            dense
-            class="q-mb-sm"
-          />
+          <q-input v-model="form.nombre" label="Nombre del grupo" outlined dense class="q-mb-sm" />
 
           <div class="row q-col-gutter-sm">
             <div class="col-12 col-sm-6">
-              <q-input
-                v-model="form.hora_inicio"
-                label="Hora inicio"
-                type="time"
-                outlined
-                dense
-                class="q-mb-sm"
-              />
+              <q-input v-model="form.hora_inicio" label="Hora inicio" type="time" outlined dense class="q-mb-sm" />
             </div>
 
             <div class="col-12 col-sm-6">
-              <q-input
-                v-model="form.hora_fin"
-                label="Hora fin"
-                type="time"
-                outlined
-                dense
-                class="q-mb-sm"
-              />
+              <q-input v-model="form.hora_fin" label="Hora fin" type="time" outlined dense class="q-mb-sm" />
             </div>
           </div>
 
-          <q-input
-            v-model.number="form.cupo_maximo"
-            label="Cupo máximo"
-            type="number"
-            outlined
-            dense
-            class="q-mb-sm"
-          />
-
-          <q-toggle
-            v-model="form.activo"
-            label="Grupo activo"
-            color="purple"
-          />
+          <q-input v-model.number="form.cupo_maximo" label="Cupo máximo" type="number" outlined dense class="q-mb-sm" />
+          <q-toggle v-model="form.activo" label="Grupo activo" color="purple" />
         </q-card-section>
 
         <q-card-actions class="form-actions">
@@ -171,34 +161,10 @@ const form = ref({
 
 const columns = [
   { name: 'nombre', label: 'Grupo', field: 'nombre', align: 'left', sortable: true },
-  {
-    name: 'horario',
-    label: 'Horario',
-    field: row => `${row.hora_inicio} ${row.hora_fin}`,
-    align: 'center',
-    sortable: true
-  },
-  {
-    name: 'cupo_maximo',
-    label: 'Cupo Máximo',
-    field: row => String(row.cupo_maximo),
-    align: 'center',
-    sortable: true
-  },
-  {
-    name: 'inscripciones_count',
-    label: 'Inscritas',
-    field: row => String(row.inscripciones_count || 0),
-    align: 'center',
-    sortable: true
-  },
-  {
-    name: 'activo',
-    label: 'Estado',
-    field: row => row.activo ? 'Activo' : 'Inactivo',
-    align: 'center',
-    sortable: true
-  },
+  { name: 'horario', label: 'Horario', field: row => `${row.hora_inicio} ${row.hora_fin}`, align: 'center', sortable: true },
+  { name: 'cupo_maximo', label: 'Cupo Máximo', field: row => String(row.cupo_maximo), align: 'center', sortable: true },
+  { name: 'inscripciones_count', label: 'Inscritas', field: row => String(row.inscripciones_count || 0), align: 'center', sortable: true },
+  { name: 'activo', label: 'Estado', field: row => row.activo ? 'Activo' : 'Inactivo', align: 'center', sortable: true },
   { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'center' }
 ]
 
@@ -214,7 +180,6 @@ const limpiarHora = (hora) => {
 
 const abrirDialogCrear = () => {
   modoEditar.value = false
-
   form.value = {
     id: null,
     nombre: '',
@@ -223,13 +188,11 @@ const abrirDialogCrear = () => {
     cupo_maximo: 30,
     activo: true
   }
-
   dialog.value = true
 }
 
 const abrirDialogEditar = (grupo) => {
   modoEditar.value = true
-
   form.value = {
     id: grupo.id,
     nombre: grupo.nombre || '',
@@ -238,7 +201,6 @@ const abrirDialogEditar = (grupo) => {
     cupo_maximo: Number(grupo.cupo_maximo) || 30,
     activo: Boolean(grupo.activo)
   }
-
   dialog.value = true
 }
 
@@ -314,9 +276,72 @@ onMounted(cargarGrupos)
   box-shadow: 0 8px 18px rgba(123, 31, 162, 0.35);
 }
 
+.btn-edit {
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  color: white;
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #d32f2f, #ef5350);
+  color: white;
+}
+
 .search-box {
   background: white;
   border-radius: 14px;
+}
+
+.group-card {
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
+}
+
+.group-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: white;
+  background: linear-gradient(135deg, #6a1b9a, #ab47bc);
+}
+
+.group-icon {
+  font-size: 34px;
+}
+
+.group-name {
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.group-hour {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.mini-box {
+  background: #e8f5e9;
+  border: 1px solid #c5e1a5;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.purple-box {
+  background: #f3e5f5;
+  border-color: #ce93d8;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #777;
+  font-weight: 700;
+}
+
+.info-number {
+  color: #4a148c;
+  font-size: 25px;
+  font-weight: 900;
 }
 
 .form-card {
