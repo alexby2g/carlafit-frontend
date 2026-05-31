@@ -1,14 +1,21 @@
 <template>
-  <q-page class="q-pa-md">
-    <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4 text-weight-bold">
-        🏃 Servicios
+  <q-page class="servicios-page q-pa-md">
+    <div class="page-header q-mb-md">
+      <div>
+        <div class="text-h4 text-weight-bold title-responsive">
+          🏃 Servicios
+        </div>
+        <div class="text-grey-7">
+          Planes, combos y precios de CarlaFit
+        </div>
       </div>
 
       <q-btn
-        color="purple"
+        class="btn-primary"
         icon="add"
         label="Nuevo Servicio"
+        unelevated
+        rounded
         @click="abrirDialogCrear"
       />
     </div>
@@ -19,8 +26,8 @@
       dense
       clearable
       debounce="300"
-      placeholder="Buscar por servicio, precio, tipo, descripción o estado..."
-      class="q-mb-md"
+      placeholder="Buscar servicio..."
+      class="search-box q-mb-md"
     >
       <template v-slot:prepend>
         <q-icon name="search" />
@@ -35,10 +42,13 @@
       flat
       bordered
       :filter="filtro"
+      :grid="$q.screen.lt.md"
     >
       <template v-slot:body-cell-precio="props">
         <q-td :props="props">
-          Bs {{ props.row.precio }}
+          <q-badge color="green" outline>
+            Bs {{ props.row.precio }}
+          </q-badge>
         </q-td>
       </template>
 
@@ -51,54 +61,51 @@
       </template>
 
       <template v-slot:body-cell-acciones="props">
-        <q-td :props="props">
-          <q-btn dense flat round color="primary" icon="edit" @click="abrirDialogEditar(props.row)" />
-          <q-btn dense flat round color="negative" icon="delete" @click="confirmarEliminar(props.row)" />
+        <q-td :props="props" class="q-gutter-xs">
+          <q-btn dense round unelevated color="blue-7" icon="edit" @click="abrirDialogEditar(props.row)" />
+          <q-btn dense round unelevated color="red-7" icon="delete" @click="confirmarEliminar(props.row)" />
         </q-td>
       </template>
     </q-table>
 
-    <q-dialog v-model="dialog">
-      <q-card style="min-width:430px">
-        <q-card-section>
-          <div class="text-h6">
-            {{ modoEditar ? 'Editar Servicio' : 'Registrar Servicio' }}
+    <q-dialog v-model="dialog" persistent>
+      <q-card class="form-card">
+        <q-card-section class="form-header">
+          <div>
+            <div class="text-h6 text-weight-bold">
+              {{ modoEditar ? 'Editar Servicio' : 'Registrar Servicio' }}
+            </div>
+            <div class="text-caption text-purple-1">
+              Completa los datos del plan
+            </div>
           </div>
+
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
         </q-card-section>
 
-        <q-card-section>
-          <q-input v-model="form.nombre" label="Nombre del servicio" outlined class="q-mb-md" />
+        <q-card-section class="form-body">
+          <q-input v-model="form.nombre" label="Nombre del servicio" outlined dense class="q-mb-sm" />
 
-          <q-input
-            v-model.number="form.precio"
-            label="Precio"
-            type="number"
-            outlined
-            class="q-mb-md"
-          />
+          <q-input v-model.number="form.precio" label="Precio" type="number" outlined dense class="q-mb-sm" />
 
-          <q-select
-            v-model="form.tipo"
-            :options="tipos"
-            label="Tipo"
-            outlined
-            class="q-mb-md"
-          />
+          <q-select v-model="form.tipo" :options="tipos" label="Tipo" outlined dense class="q-mb-sm" />
 
           <q-input
             v-model="form.descripcion"
             label="Descripción"
             type="textarea"
             outlined
-            class="q-mb-md"
+            dense
+            autogrow
+            class="q-mb-sm"
           />
 
           <q-toggle v-model="form.activo" label="Servicio activo" color="purple" />
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cancelar" v-close-popup />
-          <q-btn color="purple" label="Guardar" @click="guardar" />
+        <q-card-actions class="form-actions">
+          <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
+          <q-btn class="btn-save" icon="save" label="Guardar" unelevated rounded @click="guardar" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -107,9 +114,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Notify, Dialog } from 'quasar'
+import { Notify, Dialog, useQuasar } from 'quasar'
 import axios from 'axios'
 
+const $q = useQuasar()
 const API_URL = 'https://carlafit-backend.onrender.com/api/servicios'
 
 const dialog = ref(false)
@@ -133,13 +141,7 @@ const columns = [
   { name: 'precio', label: 'Precio', field: row => String(row.precio), align: 'center', sortable: true },
   { name: 'tipo', label: 'Tipo', field: 'tipo', align: 'center', sortable: true },
   { name: 'descripcion', label: 'Descripción', field: 'descripcion', align: 'left', sortable: true },
-  {
-    name: 'activo',
-    label: 'Estado',
-    field: row => row.activo ? 'Activo' : 'Inactivo',
-    align: 'center',
-    sortable: true
-  },
+  { name: 'activo', label: 'Estado', field: row => row.activo ? 'Activo' : 'Inactivo', align: 'center', sortable: true },
   { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'center' }
 ]
 
@@ -150,22 +152,12 @@ const cargarServicios = async () => {
 
 const abrirDialogCrear = () => {
   modoEditar.value = false
-
-  form.value = {
-    id: null,
-    nombre: '',
-    precio: 0,
-    tipo: 'diario',
-    descripcion: '',
-    activo: true
-  }
-
+  form.value = { id: null, nombre: '', precio: 0, tipo: 'diario', descripcion: '', activo: true }
   dialog.value = true
 }
 
 const abrirDialogEditar = (servicio) => {
   modoEditar.value = true
-
   form.value = {
     id: servicio.id,
     nombre: servicio.nombre || '',
@@ -174,24 +166,12 @@ const abrirDialogEditar = (servicio) => {
     descripcion: servicio.descripcion || '',
     activo: Boolean(servicio.activo)
   }
-
   dialog.value = true
 }
 
 const guardar = async () => {
   if (!form.value.nombre) {
-    Notify.create({
-      type: 'warning',
-      message: 'El nombre del servicio es obligatorio'
-    })
-    return
-  }
-
-  if (form.value.precio < 0) {
-    Notify.create({
-      type: 'warning',
-      message: 'El precio no puede ser negativo'
-    })
+    Notify.create({ type: 'warning', message: 'El nombre del servicio es obligatorio' })
     return
   }
 
@@ -228,7 +208,90 @@ const confirmarEliminar = (servicio) => {
   })
 }
 
-onMounted(() => {
-  cargarServicios()
-})
+onMounted(cargarServicios)
 </script>
+
+<style scoped>
+.servicios-page {
+  background: #f7f5fb;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.btn-primary,
+.btn-save {
+  background: linear-gradient(135deg, #7b1fa2, #ba2bd2);
+  color: white;
+  box-shadow: 0 8px 18px rgba(123, 31, 162, 0.35);
+}
+
+.search-box {
+  background: white;
+  border-radius: 14px;
+}
+
+.form-card {
+  width: 430px;
+  max-width: 94vw;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.form-header {
+  background: linear-gradient(135deg, #6a1b9a, #9c27b0);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-body {
+  padding: 16px;
+}
+
+.form-actions {
+  padding: 12px 16px 16px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .servicios-page {
+    padding: 10px;
+  }
+
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .title-responsive {
+    font-size: 32px;
+  }
+
+  .btn-primary {
+    width: 100%;
+  }
+
+  .form-card {
+    width: 96vw;
+    max-height: 88vh;
+  }
+
+  .form-body {
+    max-height: 62vh;
+    overflow-y: auto;
+  }
+
+  .form-actions {
+    position: sticky;
+    bottom: 0;
+    background: white;
+  }
+}
+</style>

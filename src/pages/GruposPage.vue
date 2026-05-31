@@ -1,14 +1,21 @@
 <template>
-  <q-page class="q-pa-md">
-    <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4 text-weight-bold">
-        ⏰ Grupos
+  <q-page class="grupos-page q-pa-md">
+    <div class="page-header q-mb-md">
+      <div>
+        <div class="text-h4 text-weight-bold title-responsive">
+          ⏰ Grupos
+        </div>
+        <div class="text-grey-7">
+          Horarios, cupos y grupos activos
+        </div>
       </div>
 
       <q-btn
-        color="purple"
+        class="btn-primary"
         icon="add"
         label="Nuevo Grupo"
+        unelevated
+        rounded
         @click="abrirDialogCrear"
       />
     </div>
@@ -19,8 +26,8 @@
       dense
       clearable
       debounce="300"
-      placeholder="Buscar grupo, horario, cupo, inscritas o estado..."
-      class="q-mb-md"
+      placeholder="Buscar grupo..."
+      class="search-box q-mb-md"
     >
       <template v-slot:prepend>
         <q-icon name="search" />
@@ -35,6 +42,7 @@
       flat
       bordered
       :filter="filtro"
+      :grid="$q.screen.lt.md"
     >
       <template v-slot:body-cell-horario="props">
         <q-td :props="props">
@@ -59,66 +67,68 @@
       </template>
 
       <template v-slot:body-cell-acciones="props">
-        <q-td :props="props">
-          <q-btn
-            dense
-            flat
-            round
-            color="primary"
-            icon="edit"
-            @click="abrirDialogEditar(props.row)"
-          />
-
-          <q-btn
-            dense
-            flat
-            round
-            color="negative"
-            icon="delete"
-            @click="confirmarEliminar(props.row)"
-          />
+        <q-td :props="props" class="q-gutter-xs">
+          <q-btn dense round unelevated color="blue-7" icon="edit" @click="abrirDialogEditar(props.row)" />
+          <q-btn dense round unelevated color="red-7" icon="delete" @click="confirmarEliminar(props.row)" />
         </q-td>
       </template>
     </q-table>
 
-    <q-dialog v-model="dialog">
-      <q-card style="min-width:430px">
-        <q-card-section>
-          <div class="text-h6">
-            {{ modoEditar ? 'Editar Grupo' : 'Registrar Grupo' }}
+    <q-dialog v-model="dialog" persistent>
+      <q-card class="form-card">
+        <q-card-section class="form-header">
+          <div>
+            <div class="text-h6 text-weight-bold">
+              {{ modoEditar ? 'Editar Grupo' : 'Registrar Grupo' }}
+            </div>
+            <div class="text-caption text-purple-1">
+              Configura horario y cupo máximo
+            </div>
           </div>
+
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
         </q-card-section>
 
-        <q-card-section>
+        <q-card-section class="form-body">
           <q-input
             v-model="form.nombre"
             label="Nombre del grupo"
             outlined
-            class="q-mb-md"
+            dense
+            class="q-mb-sm"
           />
 
-          <q-input
-            v-model="form.hora_inicio"
-            label="Hora inicio"
-            type="time"
-            outlined
-            class="q-mb-md"
-          />
+          <div class="row q-col-gutter-sm">
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model="form.hora_inicio"
+                label="Hora inicio"
+                type="time"
+                outlined
+                dense
+                class="q-mb-sm"
+              />
+            </div>
 
-          <q-input
-            v-model="form.hora_fin"
-            label="Hora fin"
-            type="time"
-            outlined
-            class="q-mb-md"
-          />
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model="form.hora_fin"
+                label="Hora fin"
+                type="time"
+                outlined
+                dense
+                class="q-mb-sm"
+              />
+            </div>
+          </div>
 
           <q-input
             v-model.number="form.cupo_maximo"
             label="Cupo máximo"
             type="number"
             outlined
-            class="q-mb-md"
+            dense
+            class="q-mb-sm"
           />
 
           <q-toggle
@@ -128,14 +138,9 @@
           />
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cancelar" v-close-popup />
-
-          <q-btn
-            color="purple"
-            label="Guardar"
-            @click="guardar"
-          />
+        <q-card-actions class="form-actions">
+          <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
+          <q-btn class="btn-save" icon="save" label="Guardar" unelevated rounded @click="guardar" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -144,10 +149,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Notify, Dialog } from 'quasar'
+import { Notify, Dialog, useQuasar } from 'quasar'
 import axios from 'axios'
 
-const API_URL = 'https://carlafit-backend.onrender.com/api'
+const $q = useQuasar()
+const API_URL = 'https://carlafit-backend.onrender.com/api/grupos'
 
 const dialog = ref(false)
 const modoEditar = ref(false)
@@ -164,13 +170,7 @@ const form = ref({
 })
 
 const columns = [
-  {
-    name: 'nombre',
-    label: 'Grupo',
-    field: 'nombre',
-    align: 'left',
-    sortable: true
-  },
+  { name: 'nombre', label: 'Grupo', field: 'nombre', align: 'left', sortable: true },
   {
     name: 'horario',
     label: 'Horario',
@@ -188,7 +188,7 @@ const columns = [
   {
     name: 'inscripciones_count',
     label: 'Inscritas',
-    field: row => String(row.inscripciones_count),
+    field: row => String(row.inscripciones_count || 0),
     align: 'center',
     sortable: true
   },
@@ -199,12 +199,7 @@ const columns = [
     align: 'center',
     sortable: true
   },
-  {
-    name: 'acciones',
-    label: 'Acciones',
-    field: 'acciones',
-    align: 'center'
-  }
+  { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'center' }
 ]
 
 const cargarGrupos = async () => {
@@ -249,26 +244,17 @@ const abrirDialogEditar = (grupo) => {
 
 const guardar = async () => {
   if (!form.value.nombre) {
-    Notify.create({
-      type: 'warning',
-      message: 'El nombre del grupo es obligatorio'
-    })
+    Notify.create({ type: 'warning', message: 'El nombre del grupo es obligatorio' })
     return
   }
 
   if (!form.value.hora_inicio || !form.value.hora_fin) {
-    Notify.create({
-      type: 'warning',
-      message: 'Debe ingresar la hora de inicio y fin'
-    })
+    Notify.create({ type: 'warning', message: 'Debe ingresar la hora de inicio y fin' })
     return
   }
 
   if (form.value.cupo_maximo < 1) {
-    Notify.create({
-      type: 'warning',
-      message: 'El cupo máximo debe ser mayor a 0'
-    })
+    Notify.create({ type: 'warning', message: 'El cupo máximo debe ser mayor a 0' })
     return
   }
 
@@ -282,18 +268,10 @@ const guardar = async () => {
 
   if (modoEditar.value) {
     await axios.put(`${API_URL}/${form.value.id}`, datos)
-
-    Notify.create({
-      type: 'positive',
-      message: 'Grupo actualizado correctamente'
-    })
+    Notify.create({ type: 'positive', message: 'Grupo actualizado correctamente' })
   } else {
     await axios.post(API_URL, datos)
-
-    Notify.create({
-      type: 'positive',
-      message: 'Grupo registrado correctamente'
-    })
+    Notify.create({ type: 'positive', message: 'Grupo registrado correctamente' })
   }
 
   dialog.value = false
@@ -308,17 +286,95 @@ const confirmarEliminar = (grupo) => {
     persistent: true
   }).onOk(async () => {
     await axios.delete(`${API_URL}/${grupo.id}`)
-
-    Notify.create({
-      type: 'positive',
-      message: 'Grupo eliminado correctamente'
-    })
-
+    Notify.create({ type: 'positive', message: 'Grupo eliminado correctamente' })
     cargarGrupos()
   })
 }
 
-onMounted(() => {
-  cargarGrupos()
-})
+onMounted(cargarGrupos)
 </script>
+
+<style scoped>
+.grupos-page {
+  background: #f7f5fb;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.btn-primary,
+.btn-save {
+  background: linear-gradient(135deg, #7b1fa2, #ba2bd2);
+  color: white;
+  box-shadow: 0 8px 18px rgba(123, 31, 162, 0.35);
+}
+
+.search-box {
+  background: white;
+  border-radius: 14px;
+}
+
+.form-card {
+  width: 430px;
+  max-width: 94vw;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.form-header {
+  background: linear-gradient(135deg, #6a1b9a, #9c27b0);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-body {
+  padding: 16px;
+}
+
+.form-actions {
+  padding: 12px 16px 16px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .grupos-page {
+    padding: 10px;
+  }
+
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .title-responsive {
+    font-size: 32px;
+  }
+
+  .btn-primary {
+    width: 100%;
+  }
+
+  .form-card {
+    width: 96vw;
+    max-height: 88vh;
+  }
+
+  .form-body {
+    max-height: 62vh;
+    overflow-y: auto;
+  }
+
+  .form-actions {
+    position: sticky;
+    bottom: 0;
+    background: white;
+  }
+}
+</style>
