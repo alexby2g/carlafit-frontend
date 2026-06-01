@@ -4,7 +4,7 @@
       <div class="hero-badge">Gestión de zumberas</div>
       <div class="hero-title">👩 Zumberas CarlaFit</div>
       <div class="hero-subtitle">
-        Administra alumnas, importa contactos y envía mensajes inteligentes por WhatsApp
+        Administra alumnas, importa contactos, revisa perfiles y envía WhatsApp
       </div>
 
       <div class="hero-actions">
@@ -87,6 +87,17 @@
 
             <q-card-actions align="right" class="q-pa-sm">
               <q-btn
+                class="btn-profile"
+                icon="person"
+                label="Perfil"
+                dense
+                unelevated
+                rounded
+                :loading="cargandoPerfil && zumberaSeleccionada?.id === props.row.id"
+                @click="abrirPerfil(props.row)"
+              />
+
+              <q-btn
                 v-if="props.row.telefono"
                 class="btn-whatsapp"
                 icon="chat"
@@ -115,6 +126,18 @@
       <template v-slot:body-cell-acciones="props">
         <q-td :props="props" class="q-gutter-xs">
           <q-btn
+            dense
+            round
+            unelevated
+            color="purple"
+            icon="person"
+            :loading="cargandoPerfil && zumberaSeleccionada?.id === props.row.id"
+            @click="abrirPerfil(props.row)"
+          >
+            <q-tooltip>Ver perfil</q-tooltip>
+          </q-btn>
+
+          <q-btn
             v-if="props.row.telefono"
             dense
             round
@@ -137,6 +160,232 @@
       </template>
     </q-table>
 
+    <!-- PERFIL PREMIUM -->
+    <q-dialog v-model="dialogPerfil" maximized>
+      <q-card class="perfil-card">
+        <q-card-section class="perfil-header">
+          <div class="perfil-top">
+            <q-avatar size="84px" color="white" text-color="purple" icon="person" />
+
+            <div class="perfil-main">
+              <div class="perfil-name">
+                {{ perfil.zumbera?.nombre || 'Zumbera' }}
+              </div>
+
+              <div class="perfil-sub">
+                📞 {{ perfil.zumbera?.telefono || 'Sin teléfono' }}
+              </div>
+
+              <div class="perfil-sub">
+                📍 {{ perfil.zumbera?.direccion || 'Sin dirección' }}
+              </div>
+
+              <q-badge :color="perfil.zumbera?.activo ? 'positive' : 'negative'" class="q-mt-sm">
+                {{ perfil.zumbera?.activo ? 'Activa' : 'Inactiva' }}
+              </q-badge>
+            </div>
+
+            <q-btn flat round dense icon="close" color="white" v-close-popup />
+          </div>
+
+          <div class="perfil-actions q-mt-md">
+            <q-btn
+              v-if="perfil.zumbera?.telefono"
+              class="perfil-action whatsapp"
+              icon="chat"
+              label="WhatsApp"
+              unelevated
+              rounded
+              @click="abrirMenuWhatsApp(perfil.zumbera)"
+            />
+
+            <q-btn
+              v-if="perfil.zumbera?.telefono"
+              class="perfil-action call"
+              icon="call"
+              label="Llamar"
+              unelevated
+              rounded
+              @click="llamarTelefono(perfil.zumbera.telefono)"
+            />
+
+            <q-btn
+              class="perfil-action edit"
+              icon="edit"
+              label="Editar"
+              unelevated
+              rounded
+              @click="abrirDialogEditar(perfil.zumbera)"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="perfil-stats q-mb-md">
+            <q-card class="perfil-stat green">
+              <div class="perfil-stat-number">Bs {{ formatoMonto(perfil.resumen.total_pagado) }}</div>
+              <div class="perfil-stat-label">Total pagado</div>
+            </q-card>
+
+            <q-card class="perfil-stat orange">
+              <div class="perfil-stat-number">Bs {{ formatoMonto(perfil.resumen.total_pendiente) }}</div>
+              <div class="perfil-stat-label">Pendiente</div>
+            </q-card>
+
+            <q-card class="perfil-stat purple">
+              <div class="perfil-stat-number">{{ perfil.resumen.total_asistencias }}</div>
+              <div class="perfil-stat-label">Asistencias</div>
+            </q-card>
+
+            <q-card class="perfil-stat blue">
+              <div class="perfil-stat-number">{{ perfil.resumen.porcentaje_asistencia }}%</div>
+              <div class="perfil-stat-label">Asistencia</div>
+            </q-card>
+          </div>
+
+          <q-tabs
+            v-model="tabPerfil"
+            dense
+            class="text-purple"
+            active-color="purple"
+            indicator-color="purple"
+            align="justify"
+          >
+            <q-tab name="pagos" icon="payments" label="Pagos" />
+            <q-tab name="inscripciones" icon="event_available" label="Inscripciones" />
+            <q-tab name="asistencias" icon="check_circle" label="Asistencias" />
+          </q-tabs>
+
+          <q-separator />
+
+          <q-tab-panels v-model="tabPerfil" animated class="perfil-panels">
+            <q-tab-panel name="pagos">
+              <q-list bordered separator class="perfil-list">
+                <q-item v-for="pago in perfil.pagos" :key="pago.id">
+                  <q-item-section avatar>
+                    <q-avatar :color="pago.estado === 'pagado' ? 'green' : 'orange'" text-color="white" icon="payments" />
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      Bs {{ formatoMonto(pago.monto) }}
+                    </q-item-label>
+                    <q-item-label caption>
+                      {{ pago.fecha_pago }} · {{ pago.metodo_pago || 'Sin método' }}
+                    </q-item-label>
+                    <q-item-label caption>
+                      {{ pago.observacion || 'Sin observación' }}
+                    </q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side>
+                    <q-badge :color="pago.estado === 'pagado' ? 'positive' : 'warning'">
+                      {{ pago.estado }}
+                    </q-badge>
+                  </q-item-section>
+                </q-item>
+
+                <q-item v-if="perfil.pagos.length === 0">
+                  <q-item-section class="text-grey-7">
+                    No tiene pagos registrados.
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-tab-panel>
+
+            <q-tab-panel name="inscripciones">
+              <q-list bordered separator class="perfil-list">
+                <q-item v-for="inscripcion in perfil.inscripciones" :key="inscripcion.id">
+                  <q-item-section avatar>
+                    <q-avatar color="purple" text-color="white" icon="event_available" />
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ inscripcion.servicio?.nombre || 'Servicio' }}
+                    </q-item-label>
+                    <q-item-label caption>
+                      Grupo: {{ inscripcion.grupo?.nombre || 'Sin grupo' }}
+                    </q-item-label>
+                    <q-item-label caption>
+                      {{ inscripcion.fecha_inicio }} → {{ inscripcion.fecha_fin || 'Sin fecha fin' }}
+                    </q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side>
+                    <q-badge :color="inscripcion.estado === 'activo' ? 'positive' : 'negative'">
+                      {{ inscripcion.estado }}
+                    </q-badge>
+                  </q-item-section>
+                </q-item>
+
+                <q-item v-if="perfil.inscripciones.length === 0">
+                  <q-item-section class="text-grey-7">
+                    No tiene inscripciones registradas.
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-tab-panel>
+
+            <q-tab-panel name="asistencias">
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-12 col-sm-4">
+                  <q-card class="mini-attendance present">
+                    <div class="mini-num">{{ perfil.resumen.presentes }}</div>
+                    <div class="mini-text">Presentes</div>
+                  </q-card>
+                </div>
+
+                <div class="col-12 col-sm-4">
+                  <q-card class="mini-attendance absent">
+                    <div class="mini-num">{{ perfil.resumen.ausentes }}</div>
+                    <div class="mini-text">Ausentes</div>
+                  </q-card>
+                </div>
+
+                <div class="col-12 col-sm-4">
+                  <q-card class="mini-attendance total">
+                    <div class="mini-num">{{ perfil.resumen.total_asistencias }}</div>
+                    <div class="mini-text">Total</div>
+                  </q-card>
+                </div>
+              </div>
+
+              <q-list bordered separator class="perfil-list">
+                <q-item v-for="asistencia in perfil.asistencias" :key="asistencia.id">
+                  <q-item-section avatar>
+                    <q-avatar :color="asistencia.estado === 'presente' ? 'green' : 'red'" text-color="white" icon="check_circle" />
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ asistencia.fecha || asistencia.created_at }}
+                    </q-item-label>
+                    <q-item-label caption>
+                      {{ asistencia.observacion || 'Sin observación' }}
+                    </q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side>
+                    <q-badge :color="asistencia.estado === 'presente' ? 'positive' : 'negative'">
+                      {{ asistencia.estado }}
+                    </q-badge>
+                  </q-item-section>
+                </q-item>
+
+                <q-item v-if="perfil.asistencias.length === 0">
+                  <q-item-section class="text-grey-7">
+                    No tiene asistencias registradas.
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-tab-panel>
+          </q-tab-panels>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- WHATSAPP -->
     <q-dialog v-model="dialogWhatsApp">
       <q-card class="whatsapp-card">
         <q-card-section class="whatsapp-header">
@@ -172,13 +421,7 @@
         </q-card-section>
 
         <q-card-section class="form-body">
-          <q-input
-            v-model="mensajePersonalizado"
-            type="textarea"
-            outlined
-            autogrow
-            label="Mensaje"
-          />
+          <q-input v-model="mensajePersonalizado" type="textarea" outlined autogrow label="Mensaje" />
         </q-card-section>
 
         <q-card-actions class="form-actions">
@@ -188,6 +431,7 @@
       </q-card>
     </q-dialog>
 
+    <!-- FORMULARIO -->
     <q-dialog v-model="dialog">
       <q-card class="form-card">
         <q-card-section class="form-header">
@@ -228,6 +472,7 @@
       </q-card>
     </q-dialog>
 
+    <!-- CONTACTOS -->
     <q-dialog v-model="dialogContactos" maximized>
       <q-card class="contactos-card">
         <q-card-section class="contactos-header">
@@ -322,14 +567,34 @@ const dialog = ref(false)
 const dialogContactos = ref(false)
 const dialogWhatsApp = ref(false)
 const dialogMensajePersonalizado = ref(false)
+const dialogPerfil = ref(false)
+
 const modoEditar = ref(false)
 const zumberas = ref([])
 const contactosTelefono = ref([])
 const zumberaSeleccionada = ref(null)
+
 const filtro = ref('')
 const filtroContactos = ref('')
 const cargandoContactos = ref(false)
+const cargandoPerfil = ref(false)
 const mensajePersonalizado = ref('')
+const tabPerfil = ref('pagos')
+
+const perfil = ref({
+  zumbera: null,
+  pagos: [],
+  inscripciones: [],
+  asistencias: [],
+  resumen: {
+    total_pagado: 0,
+    total_pendiente: 0,
+    total_asistencias: 0,
+    presentes: 0,
+    ausentes: 0,
+    porcentaje_asistencia: 0
+  }
+})
 
 const form = ref({
   id: null,
@@ -395,19 +660,15 @@ const limpiarTelefono = (telefono) => {
 const telefonoWhatsApp = (telefono) => {
   let limpio = limpiarTelefono(telefono)
 
-  if (limpio.startsWith('+')) {
-    limpio = limpio.substring(1)
-  }
-
-  if (limpio.startsWith('591')) {
-    return limpio
-  }
-
-  if (limpio.startsWith('0')) {
-    return `591${limpio.substring(1)}`
-  }
+  if (limpio.startsWith('+')) limpio = limpio.substring(1)
+  if (limpio.startsWith('591')) return limpio
+  if (limpio.startsWith('0')) return `591${limpio.substring(1)}`
 
   return `591${limpio}`
+}
+
+const formatoMonto = (valor) => {
+  return Number(valor || 0).toFixed(2)
 }
 
 const obtenerNombreContacto = (contacto) => {
@@ -440,6 +701,32 @@ const cargarZumberas = async () => {
       message: 'Error al cargar zumberas'
     })
   }
+}
+
+const abrirPerfil = async (zumbera) => {
+  try {
+    cargandoPerfil.value = true
+    zumberaSeleccionada.value = zumbera
+
+    const res = await axios.get(`${API_URL}/${zumbera.id}/perfil`)
+    perfil.value = res.data.data
+
+    tabPerfil.value = 'pagos'
+    dialogPerfil.value = true
+  } catch (error) {
+    console.error(error)
+    Notify.create({
+      type: 'negative',
+      message: 'No se pudo cargar el perfil'
+    })
+  } finally {
+    cargandoPerfil.value = false
+  }
+}
+
+const llamarTelefono = (telefono) => {
+  if (!telefono) return
+  window.open(`tel:${limpiarTelefono(telefono)}`, '_self')
 }
 
 const abrirDialogCrear = () => {
@@ -480,7 +767,6 @@ const cargarContactosTelefono = async () => {
     cargandoContactos.value = true
 
     const { Contacts } = await import('@capacitor-community/contacts')
-
     const permiso = await Contacts.requestPermissions()
 
     if (permiso.contacts !== 'granted') {
@@ -563,6 +849,10 @@ const guardar = async () => {
 
     dialog.value = false
     await cargarZumberas()
+
+    if (dialogPerfil.value && perfil.value.zumbera?.id === form.value.id) {
+      await abrirPerfil(perfil.value.zumbera)
+    }
   } catch (error) {
     console.error(error)
     Notify.create({
@@ -582,11 +872,8 @@ const crearMensaje = (tipo, zumbera) => {
 
   const mensajes = {
     bienvenida: `Hola ${nombre} 💜, bienvenida a CarlaFit. Estamos felices de acompañarte en tu proceso de bienestar, energía y entrenamiento. ¡Gracias por formar parte de nuestra familia CarlaFit!`,
-
     pago: `Hola ${nombre} 💜, te recordamos con cariño que tienes un pago pendiente en CarlaFit. Puedes regularizarlo para continuar disfrutando de tus clases sin interrupciones. ¡Gracias por tu confianza!`,
-
     inscripcion: `Hola ${nombre} 💜, te recordamos que tu inscripción está próxima a vencer. Puedes renovarla para seguir disfrutando de nuestras clases y beneficios en CarlaFit.`,
-
     clase: `Hola ${nombre} 💜, te recordamos tu clase de hoy en CarlaFit. ¡Te esperamos con toda la energía y actitud para entrenar juntas!`
   }
 
@@ -736,18 +1023,56 @@ onMounted(() => {
   font-size: 16px;
 }
 
-.stats-grid {
+.stats-grid,
+.perfil-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
 }
 
-.stat-card {
+.perfil-stats {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-card,
+.perfil-stat {
   border-radius: 26px;
   min-height: 130px;
   box-shadow: 0 12px 26px rgba(123, 31, 162, 0.12);
   position: relative;
   overflow: hidden;
+}
+
+.perfil-stat {
+  padding: 18px;
+  min-height: 100px;
+  color: white;
+}
+
+.perfil-stat.green {
+  background: linear-gradient(135deg, #0b8f3a, #43a047);
+}
+
+.perfil-stat.orange {
+  background: linear-gradient(135deg, #fb8c00, #ffb74d);
+}
+
+.perfil-stat.purple {
+  background: linear-gradient(135deg, #7b1fa2, #ab47bc);
+}
+
+.perfil-stat.blue {
+  background: linear-gradient(135deg, #1565c0, #42a5f5);
+}
+
+.perfil-stat-number {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.perfil-stat-label {
+  font-weight: 700;
+  opacity: 0.95;
 }
 
 .stat-label {
@@ -796,7 +1121,8 @@ onMounted(() => {
 }
 
 .btn-save,
-.btn-primary {
+.btn-primary,
+.btn-profile {
   background: linear-gradient(135deg, #6a1b9a, #ab47bc);
   color: white;
 }
@@ -842,11 +1168,17 @@ onMounted(() => {
   background: linear-gradient(135deg, #6a1b9a, #ab47bc);
 }
 
+.whatsapp-card,
+.form-card {
+  width: 470px;
+  max-width: 94vw;
+  border-radius: 28px;
+  overflow: hidden;
+}
+
 .whatsapp-card {
   width: 420px;
-  max-width: 94vw;
   border-radius: 24px;
-  overflow: hidden;
 }
 
 .whatsapp-header {
@@ -867,13 +1199,6 @@ onMounted(() => {
   font-size: 20px;
   font-weight: 900;
   color: #6a1b9a;
-}
-
-.form-card {
-  width: 470px;
-  max-width: 94vw;
-  border-radius: 28px;
-  overflow: hidden;
 }
 
 .form-header,
@@ -899,7 +1224,8 @@ onMounted(() => {
   background: #fff7fd;
 }
 
-.contactos-list {
+.contactos-list,
+.perfil-list {
   border-radius: 20px;
   overflow: hidden;
   background: white;
@@ -917,6 +1243,90 @@ onMounted(() => {
   position: sticky;
   bottom: 0;
   background: #fff7fd;
+}
+
+.perfil-card {
+  background: #fff7fd;
+}
+
+.perfil-header {
+  background: linear-gradient(135deg, #7b1fa2, #ab47bc);
+  color: white;
+  padding: 24px;
+}
+
+.perfil-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.perfil-main {
+  flex: 1;
+}
+
+.perfil-name {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.perfil-sub {
+  opacity: 0.95;
+  margin-top: 4px;
+}
+
+.perfil-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.perfil-action {
+  color: white;
+  font-weight: 800;
+}
+
+.perfil-action.whatsapp {
+  background: linear-gradient(135deg, #128c7e, #25d366);
+}
+
+.perfil-action.call {
+  background: linear-gradient(135deg, #1565c0, #42a5f5);
+}
+
+.perfil-action.edit {
+  background: linear-gradient(135deg, #fb8c00, #ffb74d);
+}
+
+.perfil-panels {
+  background: transparent;
+}
+
+.mini-attendance {
+  border-radius: 20px;
+  padding: 18px;
+  color: white;
+}
+
+.mini-attendance.present {
+  background: linear-gradient(135deg, #2e7d32, #66bb6a);
+}
+
+.mini-attendance.absent {
+  background: linear-gradient(135deg, #c62828, #ef5350);
+}
+
+.mini-attendance.total {
+  background: linear-gradient(135deg, #6a1b9a, #ab47bc);
+}
+
+.mini-num {
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.mini-text {
+  font-weight: 700;
 }
 
 @media (max-width: 700px) {
@@ -937,7 +1347,8 @@ onMounted(() => {
     font-size: 17px;
   }
 
-  .stats-grid {
+  .stats-grid,
+  .perfil-stats {
     grid-template-columns: 1fr;
   }
 
@@ -962,6 +1373,14 @@ onMounted(() => {
   }
 
   .contactos-actions .q-btn {
+    width: 100%;
+  }
+
+  .perfil-top {
+    flex-direction: column;
+  }
+
+  .perfil-action {
     width: 100%;
   }
 }
