@@ -562,6 +562,7 @@ onMounted(cargarDatos)
 .form-card {
   width: 460px;
   max-width: 94vw;
+  max-height: 90vh;
   border-radius: 22px;
   overflow: hidden;
 }
@@ -583,14 +584,13 @@ onMounted(cargarDatos)
 .form-actions {
   padding: 12px 16px 16px;
   justify-content: flex-end;
+  background: white;
 }
 
 @media (max-width: 600px) {
-  .form-body {
-    max-height: 62vh;
-    overflow-y: auto;
+  .inscripciones-page {
+    padding: 10px;
   }
-}
 
   .page-header {
     align-items: stretch;
