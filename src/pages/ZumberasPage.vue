@@ -2,11 +2,9 @@
   <q-page class="zumberas-page q-pa-md">
     <div class="hero-card q-mb-lg">
       <div class="hero-badge">Gestión de zumberas</div>
-
       <div class="hero-title">👩 Zumberas CarlaFit</div>
-
       <div class="hero-subtitle">
-        Administra alumnas, importa contactos y envía mensajes por WhatsApp
+        Administra alumnas, importa contactos y envía mensajes inteligentes por WhatsApp
       </div>
 
       <div class="hero-actions">
@@ -96,7 +94,7 @@
                 dense
                 unelevated
                 rounded
-                @click="enviarWhatsApp(props.row)"
+                @click="abrirMenuWhatsApp(props.row)"
               />
 
               <q-btn class="btn-edit" icon="edit" label="Editar" dense unelevated rounded @click="abrirDialogEditar(props.row)" />
@@ -116,8 +114,16 @@
 
       <template v-slot:body-cell-acciones="props">
         <q-td :props="props" class="q-gutter-xs">
-          <q-btn v-if="props.row.telefono" dense round unelevated color="green" icon="chat" @click="enviarWhatsApp(props.row)">
-            <q-tooltip>Enviar WhatsApp</q-tooltip>
+          <q-btn
+            v-if="props.row.telefono"
+            dense
+            round
+            unelevated
+            color="green"
+            icon="chat"
+            @click="abrirMenuWhatsApp(props.row)"
+          >
+            <q-tooltip>WhatsApp inteligente</q-tooltip>
           </q-btn>
 
           <q-btn dense round unelevated color="blue-7" icon="edit" @click="abrirDialogEditar(props.row)">
@@ -130,6 +136,57 @@
         </q-td>
       </template>
     </q-table>
+
+    <q-dialog v-model="dialogWhatsApp">
+      <q-card class="whatsapp-card">
+        <q-card-section class="whatsapp-header">
+          <div>
+            <div class="text-h6 text-weight-bold">💬 WhatsApp inteligente</div>
+            <div class="text-caption">
+              {{ zumberaSeleccionada?.nombre }}
+            </div>
+          </div>
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="q-gutter-sm">
+          <q-btn class="wa-option" icon="favorite" label="Mensaje de bienvenida" @click="enviarMensajeTipo('bienvenida')" />
+          <q-btn class="wa-option" icon="payments" label="Recordar pago pendiente" @click="enviarMensajeTipo('pago')" />
+          <q-btn class="wa-option" icon="event_available" label="Inscripción por vencer" @click="enviarMensajeTipo('inscripcion')" />
+          <q-btn class="wa-option" icon="fitness_center" label="Recordar clase" @click="enviarMensajeTipo('clase')" />
+          <q-btn class="wa-option custom" icon="edit_note" label="Mensaje personalizado" @click="abrirMensajePersonalizado" />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="dialogMensajePersonalizado">
+      <q-card class="form-card">
+        <q-card-section class="form-header">
+          <div>
+            <div class="text-h6 text-weight-bold">✍️ Mensaje personalizado</div>
+            <div class="text-caption text-purple-1">
+              Escribe el mensaje para {{ zumberaSeleccionada?.nombre }}
+            </div>
+          </div>
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="form-body">
+          <q-input
+            v-model="mensajePersonalizado"
+            type="textarea"
+            outlined
+            autogrow
+            label="Mensaje"
+          />
+        </q-card-section>
+
+        <q-card-actions class="form-actions">
+          <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
+          <q-btn class="btn-whatsapp" icon="send" label="Enviar WhatsApp" unelevated rounded @click="enviarPersonalizado" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <q-dialog v-model="dialog">
       <q-card class="form-card">
@@ -175,9 +232,7 @@
       <q-card class="contactos-card">
         <q-card-section class="contactos-header">
           <div>
-            <div class="text-h5 text-weight-bold">
-              📱 Importar contactos
-            </div>
+            <div class="text-h5 text-weight-bold">📱 Importar contactos</div>
             <div class="text-subtitle2">
               Selecciona un contacto del teléfono para guardarlo como zumbera
             </div>
@@ -265,12 +320,16 @@ const API_URL = 'https://carlafit-backend.onrender.com/api/zumberas'
 
 const dialog = ref(false)
 const dialogContactos = ref(false)
+const dialogWhatsApp = ref(false)
+const dialogMensajePersonalizado = ref(false)
 const modoEditar = ref(false)
 const zumberas = ref([])
 const contactosTelefono = ref([])
+const zumberaSeleccionada = ref(null)
 const filtro = ref('')
 const filtroContactos = ref('')
 const cargandoContactos = ref(false)
+const mensajePersonalizado = ref('')
 
 const form = ref({
   id: null,
@@ -496,18 +555,10 @@ const guardar = async () => {
   try {
     if (modoEditar.value) {
       await axios.put(`${API_URL}/${form.value.id}`, datos)
-
-      Notify.create({
-        type: 'positive',
-        message: 'Zumbera actualizada correctamente'
-      })
+      Notify.create({ type: 'positive', message: 'Zumbera actualizada correctamente' })
     } else {
       await axios.post(API_URL, datos)
-
-      Notify.create({
-        type: 'positive',
-        message: 'Zumbera registrada correctamente'
-      })
+      Notify.create({ type: 'positive', message: 'Zumbera registrada correctamente' })
     }
 
     dialog.value = false
@@ -521,8 +572,29 @@ const guardar = async () => {
   }
 }
 
-const enviarWhatsApp = (zumbera) => {
-  if (!zumbera.telefono) {
+const abrirMenuWhatsApp = (zumbera) => {
+  zumberaSeleccionada.value = zumbera
+  dialogWhatsApp.value = true
+}
+
+const crearMensaje = (tipo, zumbera) => {
+  const nombre = zumbera?.nombre || 'querida zumbera'
+
+  const mensajes = {
+    bienvenida: `Hola ${nombre} 💜, bienvenida a CarlaFit. Estamos felices de acompañarte en tu proceso de bienestar, energía y entrenamiento. ¡Gracias por formar parte de nuestra familia CarlaFit!`,
+
+    pago: `Hola ${nombre} 💜, te recordamos con cariño que tienes un pago pendiente en CarlaFit. Puedes regularizarlo para continuar disfrutando de tus clases sin interrupciones. ¡Gracias por tu confianza!`,
+
+    inscripcion: `Hola ${nombre} 💜, te recordamos que tu inscripción está próxima a vencer. Puedes renovarla para seguir disfrutando de nuestras clases y beneficios en CarlaFit.`,
+
+    clase: `Hola ${nombre} 💜, te recordamos tu clase de hoy en CarlaFit. ¡Te esperamos con toda la energía y actitud para entrenar juntas!`
+  }
+
+  return mensajes[tipo] || mensajes.bienvenida
+}
+
+const abrirWhatsAppConMensaje = (zumbera, mensaje) => {
+  if (!zumbera?.telefono) {
     Notify.create({
       type: 'warning',
       message: 'Esta zumbera no tiene teléfono registrado'
@@ -531,10 +603,36 @@ const enviarWhatsApp = (zumbera) => {
   }
 
   const telefono = telefonoWhatsApp(zumbera.telefono)
-  const mensaje = `Hola ${zumbera.nombre}, te saludamos de CarlaFit 💜. Queríamos recordarte que estamos felices de acompañarte en tu entrenamiento.`
   const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`
-
   window.open(url, '_blank')
+}
+
+const enviarMensajeTipo = (tipo) => {
+  const zumbera = zumberaSeleccionada.value
+  const mensaje = crearMensaje(tipo, zumbera)
+
+  dialogWhatsApp.value = false
+  abrirWhatsAppConMensaje(zumbera, mensaje)
+}
+
+const abrirMensajePersonalizado = () => {
+  const nombre = zumberaSeleccionada.value?.nombre || ''
+  mensajePersonalizado.value = `Hola ${nombre} 💜, `
+  dialogWhatsApp.value = false
+  dialogMensajePersonalizado.value = true
+}
+
+const enviarPersonalizado = () => {
+  if (!mensajePersonalizado.value.trim()) {
+    Notify.create({
+      type: 'warning',
+      message: 'Escribe un mensaje antes de enviar'
+    })
+    return
+  }
+
+  dialogMensajePersonalizado.value = false
+  abrirWhatsAppConMensaje(zumberaSeleccionada.value, mensajePersonalizado.value)
 }
 
 const confirmarEliminar = (zumbera) => {
@@ -729,6 +827,35 @@ onMounted(() => {
 .btn-reload {
   background: linear-gradient(135deg, #1976d2, #42a5f5);
   color: white;
+}
+
+.wa-option {
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #128c7e, #25d366);
+  color: white;
+  font-weight: 800;
+}
+
+.wa-option.custom {
+  background: linear-gradient(135deg, #6a1b9a, #ab47bc);
+}
+
+.whatsapp-card {
+  width: 420px;
+  max-width: 94vw;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.whatsapp-header {
+  background: linear-gradient(135deg, #128c7e, #25d366);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px;
 }
 
 .mobile-card {
