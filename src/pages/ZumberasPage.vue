@@ -1,24 +1,50 @@
 <template>
   <q-page class="zumberas-page q-pa-md">
+    <div class="hero-card q-mb-lg">
+      <div class="hero-badge">Gestión de zumberas</div>
 
-    <div class="page-header q-mb-md">
-      <div>
-        <div class="text-h4 text-weight-bold title-responsive">
-          👩 Zumberas
-        </div>
-        <div class="text-grey-7">
-          Registro de alumnas, contactos y comunicación
-        </div>
+      <div class="hero-title">
+        👩 Zumberas CarlaFit
       </div>
 
-      <q-btn
-        class="btn-primary"
-        icon="add"
-        label="Nueva Zumbera"
-        unelevated
-        rounded
-        @click="abrirDialogCrear"
-      />
+      <div class="hero-subtitle">
+        Administra alumnas, importa contactos y envía mensajes por WhatsApp
+      </div>
+
+      <div class="hero-actions">
+        <q-btn class="hero-btn" icon="contacts" label="Importar contacto" @click="abrirDialogCrearConContacto" />
+        <q-btn class="hero-btn" icon="add" label="Nueva zumbera" @click="abrirDialogCrear" />
+        <q-btn class="hero-btn" icon="refresh" label="Actualizar" @click="cargarZumberas" />
+      </div>
+    </div>
+
+    <div class="stats-grid q-mb-lg">
+      <q-card class="stat-card">
+        <q-card-section>
+          <div class="stat-label">Zumberas</div>
+          <div class="stat-number">{{ totalZumberas }}</div>
+          <div class="stat-text">Registradas</div>
+        </q-card-section>
+        <q-icon name="groups" class="stat-icon purple" />
+      </q-card>
+
+      <q-card class="stat-card">
+        <q-card-section>
+          <div class="stat-label">Activas</div>
+          <div class="stat-number">{{ totalActivas }}</div>
+          <div class="stat-text">Actualmente activas</div>
+        </q-card-section>
+        <q-icon name="verified" class="stat-icon green" />
+      </q-card>
+
+      <q-card class="stat-card">
+        <q-card-section>
+          <div class="stat-label">Con teléfono</div>
+          <div class="stat-number">{{ totalConTelefono }}</div>
+          <div class="stat-text">Pueden usar WhatsApp</div>
+        </q-card-section>
+        <q-icon name="phone" class="stat-icon whatsapp" />
+      </q-card>
     </div>
 
     <q-input
@@ -27,22 +53,21 @@
       dense
       clearable
       debounce="300"
-      placeholder="Buscar por nombre, teléfono, dirección o estado..."
+      placeholder="Buscar por nombre, teléfono o dirección..."
       class="search-box q-mb-md"
     >
       <template v-slot:prepend>
-        <q-icon name="search" />
+        <q-icon name="search" color="purple" />
       </template>
     </q-input>
 
     <q-table
       title="Lista de Zumberas"
-      :rows="zumberas"
+      :rows="zumberasFiltradas"
       :columns="columns"
       row-key="id"
       flat
       bordered
-      :filter="filtro"
       :grid="$q.screen.lt.md"
     >
       <template v-slot:item="props">
@@ -51,15 +76,9 @@
             <q-card-section>
               <div class="row items-start justify-between">
                 <div>
-                  <div class="mobile-title">
-                    {{ props.row.nombre }}
-                  </div>
-                  <div class="text-grey-7">
-                    📞 {{ props.row.telefono || 'Sin teléfono' }}
-                  </div>
-                  <div class="text-grey-7">
-                    📍 {{ props.row.direccion || 'Sin dirección' }}
-                  </div>
+                  <div class="mobile-title">{{ props.row.nombre }}</div>
+                  <div class="text-grey-7">📞 {{ props.row.telefono || 'Sin teléfono' }}</div>
+                  <div class="text-grey-7">📍 {{ props.row.direccion || 'Sin dirección' }}</div>
                 </div>
 
                 <q-badge :color="props.row.activo ? 'positive' : 'negative'">
@@ -82,25 +101,8 @@
                 @click="enviarWhatsApp(props.row)"
               />
 
-              <q-btn
-                class="btn-edit"
-                icon="edit"
-                label="Editar"
-                dense
-                unelevated
-                rounded
-                @click="abrirDialogEditar(props.row)"
-              />
-
-              <q-btn
-                class="btn-delete"
-                icon="delete"
-                label="Eliminar"
-                dense
-                unelevated
-                rounded
-                @click="confirmarEliminar(props.row)"
-              />
+              <q-btn class="btn-edit" icon="edit" label="Editar" dense unelevated rounded @click="abrirDialogEditar(props.row)" />
+              <q-btn class="btn-delete" icon="delete" label="Eliminar" dense unelevated rounded @click="confirmarEliminar(props.row)" />
             </q-card-actions>
           </q-card>
         </div>
@@ -116,37 +118,15 @@
 
       <template v-slot:body-cell-acciones="props">
         <q-td :props="props" class="q-gutter-xs">
-          <q-btn
-            v-if="props.row.telefono"
-            dense
-            round
-            unelevated
-            color="green"
-            icon="chat"
-            @click="enviarWhatsApp(props.row)"
-          >
+          <q-btn v-if="props.row.telefono" dense round unelevated color="green" icon="chat" @click="enviarWhatsApp(props.row)">
             <q-tooltip>Enviar WhatsApp</q-tooltip>
           </q-btn>
 
-          <q-btn
-            dense
-            round
-            unelevated
-            color="blue-7"
-            icon="edit"
-            @click="abrirDialogEditar(props.row)"
-          >
+          <q-btn dense round unelevated color="blue-7" icon="edit" @click="abrirDialogEditar(props.row)">
             <q-tooltip>Editar</q-tooltip>
           </q-btn>
 
-          <q-btn
-            dense
-            round
-            unelevated
-            color="red-7"
-            icon="delete"
-            @click="confirmarEliminar(props.row)"
-          >
+          <q-btn dense round unelevated color="red-7" icon="delete" @click="confirmarEliminar(props.row)">
             <q-tooltip>Eliminar</q-tooltip>
           </q-btn>
         </q-td>
@@ -178,57 +158,24 @@
             @click="importarContacto"
           />
 
-          <q-input
-            v-model="form.nombre"
-            label="Nombre"
-            outlined
-            dense
-            class="q-mb-md"
-          />
+          <q-input v-model="form.nombre" label="Nombre" outlined dense class="q-mb-md" />
+          <q-input v-model="form.telefono" label="Teléfono" outlined dense class="q-mb-md" />
+          <q-input v-model="form.direccion" label="Dirección" outlined dense class="q-mb-md" />
 
-          <q-input
-            v-model="form.telefono"
-            label="Teléfono"
-            outlined
-            dense
-            class="q-mb-md"
-            mask="###########"
-          />
-
-          <q-input
-            v-model="form.direccion"
-            label="Dirección"
-            outlined
-            dense
-            class="q-mb-md"
-          />
-
-          <q-toggle
-            v-model="form.activo"
-            label="Zumbera activa"
-            color="purple"
-          />
+          <q-toggle v-model="form.activo" label="Zumbera activa" color="purple" />
         </q-card-section>
 
         <q-card-actions class="form-actions">
           <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
-          <q-btn
-            class="btn-save"
-            icon="save"
-            label="Guardar"
-            unelevated
-            rounded
-            @click="guardar"
-          />
+          <q-btn class="btn-save" icon="save" label="Guardar" unelevated rounded @click="guardar" />
         </q-card-actions>
       </q-card>
     </q-dialog>
-
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Notify, Dialog, useQuasar } from 'quasar'
 import axios from 'axios'
 
@@ -263,6 +210,48 @@ const columns = [
   { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'center' }
 ]
 
+const zumberasFiltradas = computed(() => {
+  const texto = filtro.value.toLowerCase().trim()
+
+  if (!texto) return zumberas.value
+
+  return zumberas.value.filter(z => {
+    return (
+      String(z.nombre || '').toLowerCase().includes(texto) ||
+      String(z.telefono || '').toLowerCase().includes(texto) ||
+      String(z.direccion || '').toLowerCase().includes(texto) ||
+      String(z.activo ? 'activa' : 'inactiva').includes(texto)
+    )
+  })
+})
+
+const totalZumberas = computed(() => zumberas.value.length)
+const totalActivas = computed(() => zumberas.value.filter(z => z.activo).length)
+const totalConTelefono = computed(() => zumberas.value.filter(z => z.telefono).length)
+
+const limpiarTelefono = (telefono) => {
+  return String(telefono || '')
+    .replace(/\s+/g, '')
+    .replace(/-/g, '')
+    .replace(/\(/g, '')
+    .replace(/\)/g, '')
+    .replace(/\+/g, '')
+}
+
+const telefonoWhatsApp = (telefono) => {
+  const limpio = limpiarTelefono(telefono)
+
+  if (limpio.startsWith('591')) {
+    return limpio
+  }
+
+  if (limpio.startsWith('0')) {
+    return `591${limpio.substring(1)}`
+  }
+
+  return `591${limpio}`
+}
+
 const cargarZumberas = async () => {
   try {
     const res = await axios.get(API_URL)
@@ -290,6 +279,11 @@ const abrirDialogCrear = () => {
   dialog.value = true
 }
 
+const abrirDialogCrearConContacto = async () => {
+  abrirDialogCrear()
+  await importarContacto()
+}
+
 const abrirDialogEditar = (zumbera) => {
   modoEditar.value = true
 
@@ -302,15 +296,6 @@ const abrirDialogEditar = (zumbera) => {
   }
 
   dialog.value = true
-}
-
-const limpiarTelefono = (telefono) => {
-  return String(telefono || '')
-    .replace(/\s+/g, '')
-    .replace(/-/g, '')
-    .replace(/\(/g, '')
-    .replace(/\)/g, '')
-    .replace(/\+/g, '')
 }
 
 const importarContacto = async () => {
@@ -364,10 +349,9 @@ const importarContacto = async () => {
     })
   } catch (error) {
     console.error(error)
-
     Notify.create({
       type: 'warning',
-      message: 'La importación de contactos funciona en Android. En navegador puede no estar disponible.'
+      message: 'No se pudo importar el contacto'
     })
   }
 }
@@ -425,11 +409,11 @@ const enviarWhatsApp = (zumbera) => {
     return
   }
 
-  const telefono = limpiarTelefono(zumbera.telefono)
+  const telefono = telefonoWhatsApp(zumbera.telefono)
 
   const mensaje = `Hola ${zumbera.nombre}, te saludamos de CarlaFit 💜. Queríamos recordarte que estamos felices de acompañarte en tu entrenamiento.`
 
-  const url = `https://wa.me/591${telefono}?text=${encodeURIComponent(mensaje)}`
+  const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`
 
   window.open(url, '_blank')
 }
@@ -467,37 +451,144 @@ onMounted(() => {
 
 <style scoped>
 .zumberas-page {
-  background: #f7f5fb;
+  background: linear-gradient(180deg, #fff1fb, #f7f5fb);
   min-height: 100vh;
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.hero-card {
+  padding: 28px;
+  border-radius: 32px;
+  background: linear-gradient(135deg, #7b1fa2, #9c27b0, #ce5bd8);
+  color: white;
+  box-shadow: 0 16px 35px rgba(123, 31, 162, 0.25);
+  position: relative;
+  overflow: hidden;
 }
 
-.title-responsive {
-  color: #2f2540;
+.hero-card::after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  right: -70px;
+  top: -60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.hero-badge {
+  display: inline-block;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 18px;
+}
+
+.hero-title {
+  font-size: 38px;
+  font-weight: 900;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  font-weight: 500;
+  opacity: 0.95;
+  margin-top: 8px;
+  margin-bottom: 26px;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-actions {
+  display: grid;
+  gap: 14px;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-btn {
+  height: 56px;
+  border-radius: 22px;
+  background: white;
+  color: #8e24aa;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.stat-card {
+  border-radius: 26px;
+  min-height: 130px;
+  box-shadow: 0 12px 26px rgba(123, 31, 162, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-label {
+  color: #777;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.stat-number {
+  font-size: 34px;
+  font-weight: 900;
+  color: #222;
+}
+
+.stat-text {
+  color: #888;
+  font-size: 14px;
+}
+
+.stat-icon {
+  position: absolute;
+  right: 22px;
+  top: 34px;
+  font-size: 52px;
+  color: white;
+  padding: 16px;
+  border-radius: 50%;
+}
+
+.stat-icon.purple {
+  background: #8e24aa;
+}
+
+.stat-icon.green {
+  background: #43a047;
+}
+
+.stat-icon.whatsapp {
+  background: #25d366;
 }
 
 .search-box {
   background: white;
-  border-radius: 14px;
+  border-radius: 18px;
 }
 
-.btn-primary,
-.btn-save {
+.btn-save,
+.btn-primary {
   background: linear-gradient(135deg, #6a1b9a, #ab47bc);
   color: white;
-  box-shadow: 0 8px 18px rgba(106, 27, 154, 0.35);
 }
 
 .btn-contact {
   width: 100%;
+  height: 54px;
   background: linear-gradient(135deg, #512da8, #7e57c2);
   color: white;
+  font-weight: 800;
 }
 
 .btn-whatsapp {
@@ -516,56 +607,61 @@ onMounted(() => {
 }
 
 .mobile-card {
-  border-radius: 18px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 
 .mobile-title {
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 900;
   color: #6a1b9a;
 }
 
 .form-card {
-  width: 450px;
+  width: 470px;
   max-width: 94vw;
-  border-radius: 22px;
+  border-radius: 28px;
   overflow: hidden;
 }
 
 .form-header {
-  background: linear-gradient(135deg, #6a1b9a, #ab47bc);
+  background: linear-gradient(135deg, #7b1fa2, #ab47bc);
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 22px;
 }
 
 .form-body {
-  padding: 16px;
+  padding: 22px;
 }
 
 .form-actions {
-  padding: 12px 16px 16px;
+  padding: 14px 22px 22px;
   justify-content: flex-end;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .zumberas-page {
     padding: 10px;
   }
 
-  .page-header {
-    align-items: stretch;
-    flex-direction: column;
+  .hero-card {
+    padding: 22px;
+    border-radius: 28px;
   }
 
-  .title-responsive {
-    font-size: 32px;
+  .hero-title {
+    font-size: 34px;
   }
 
-  .btn-primary {
-    width: 100%;
+  .hero-subtitle {
+    font-size: 17px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-card {
