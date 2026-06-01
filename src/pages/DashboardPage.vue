@@ -3,11 +3,12 @@
     <div class="hero-card q-pa-lg q-mb-md">
       <div class="hero-content">
         <div>
+          <div class="hero-badge">Panel principal</div>
           <div class="text-h4 text-weight-bold text-white title-responsive">
             📊 Dashboard CarlaFit
           </div>
           <div class="text-subtitle1 text-purple-1">
-            Gestión de clases, pagos, asistencia y bienestar
+            Control de zumberas, pagos, asistencia y recordatorios
           </div>
         </div>
 
@@ -19,7 +20,7 @@
           unelevated
           rounded
           :loading="loading"
-          @click="cargarDashboard"
+          @click="cargarTodo"
         />
       </div>
     </div>
@@ -27,6 +28,17 @@
     <q-banner v-if="error" class="bg-red-1 text-red-9 q-mb-md" rounded>
       {{ error }}
     </q-banner>
+
+    <div class="quick-grid q-mb-md">
+      <q-btn class="quick-btn" icon="groups" label="Zumberas" to="/zumberas" />
+      <q-btn class="quick-btn" icon="payments" label="Pagos" to="/pagos" />
+      <q-btn class="quick-btn" icon="event_available" label="Inscripciones" to="/inscripciones" />
+      <q-btn class="quick-btn message" icon="forum" label="Centro de Mensajes" to="/centro-mensajes">
+        <q-badge v-if="centro.resumen.total > 0" color="red" floating>
+          {{ centro.resumen.total }}
+        </q-badge>
+      </q-btn>
+    </div>
 
     <div class="row q-col-gutter-md">
       <div class="col-12 col-sm-6 col-md-3">
@@ -65,9 +77,9 @@
       <div class="col-12 col-sm-6 col-md-3">
         <q-card class="premium-card orange-card">
           <div>
-            <div class="card-label">Pendientes</div>
+            <div class="card-label">Pagos pendientes</div>
             <div class="card-number">{{ dashboard.pagos_pendientes }}</div>
-            <div class="card-caption">Pagos por cobrar</div>
+            <div class="card-caption">Por cobrar</div>
           </div>
           <q-icon name="warning" class="card-icon" />
         </q-card>
@@ -141,6 +153,41 @@
       </div>
     </div>
 
+    <q-card class="message-summary q-mt-md">
+      <div class="row items-center justify-between q-mb-md">
+        <div>
+          <div class="text-h6 text-weight-bold">💬 Centro de Mensajes</div>
+          <div class="text-grey-7">Recordatorios listos para WhatsApp Business</div>
+        </div>
+
+        <q-btn
+          class="btn-message"
+          icon="forum"
+          label="Abrir"
+          to="/centro-mensajes"
+          unelevated
+          rounded
+        />
+      </div>
+
+      <div class="message-grid">
+        <div class="message-mini orange">
+          <div class="mini-number">{{ centro.resumen.pagos_pendientes }}</div>
+          <div class="mini-label">Pagos pendientes</div>
+        </div>
+
+        <div class="message-mini purple">
+          <div class="mini-number">{{ centro.resumen.inscripciones_por_vencer }}</div>
+          <div class="mini-label">Por vencer</div>
+        </div>
+
+        <div class="message-mini red">
+          <div class="mini-number">{{ centro.resumen.inscripciones_vencidas }}</div>
+          <div class="mini-label">Vencidas</div>
+        </div>
+      </div>
+    </q-card>
+
     <q-card class="groups-card q-mt-md">
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -197,9 +244,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'https://carlafit-backend.onrender.com/api'
+import { api } from 'src/boot/axios'
 
 const loading = ref(false)
 const error = ref('')
@@ -218,13 +263,34 @@ const dashboard = ref({
   personas_por_grupo: []
 })
 
+const centro = ref({
+  resumen: {
+    pagos_pendientes: 0,
+    inscripciones_por_vencer: 0,
+    inscripciones_vencidas: 0,
+    total: 0
+  }
+})
+
 const cargarDashboard = async () => {
+  const res = await api.get('/dashboard')
+  dashboard.value = res.data.data || dashboard.value
+}
+
+const cargarCentroMensajes = async () => {
+  const res = await api.get('/centro-mensajes')
+  centro.value = res.data.data || centro.value
+}
+
+const cargarTodo = async () => {
   loading.value = true
   error.value = ''
 
   try {
-    const res = await axios.get(`${API_BASE_URL}/dashboard`)
-    dashboard.value = res.data.data
+    await Promise.all([
+      cargarDashboard(),
+      cargarCentroMensajes()
+    ])
   } catch (err) {
     console.error(err)
     error.value = 'No se pudo conectar con el backend online de CarlaFit.'
@@ -246,19 +312,42 @@ const limpiarHora = (hora) => {
   return hora.substring(0, 5)
 }
 
-onMounted(cargarDashboard)
+onMounted(cargarTodo)
 </script>
 
 <style scoped>
 .dashboard-page {
-  background: #f7f5fb;
+  background: linear-gradient(180deg, #fff1fb, #f7f5fb);
   min-height: 100vh;
 }
 
 .hero-card {
-  border-radius: 28px;
-  background: linear-gradient(135deg, #4a148c, #8e24aa, #ce93d8);
+  border-radius: 30px;
+  background: linear-gradient(135deg, #4a148c, #8e24aa, #ce5bd8);
   box-shadow: 0 14px 32px rgba(106, 27, 154, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-card::after {
+  content: "";
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  right: -70px;
+  top: -70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.hero-badge {
+  display: inline-block;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  font-weight: 800;
+  margin-bottom: 10px;
 }
 
 .hero-content {
@@ -266,6 +355,28 @@ onMounted(cargarDashboard)
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.quick-btn {
+  height: 52px;
+  border-radius: 18px;
+  background: white;
+  color: #7b1fa2;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(123, 31, 162, 0.12);
+}
+
+.quick-btn.message {
+  background: linear-gradient(135deg, #7b1fa2, #ab47bc);
+  color: white;
 }
 
 .premium-card,
@@ -385,10 +496,49 @@ onMounted(cargarDashboard)
   color: #c62828;
 }
 
-.groups-card {
+.groups-card,
+.message-summary {
   border-radius: 24px;
   padding: 22px;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+.message-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.message-mini {
+  border-radius: 20px;
+  padding: 18px;
+  color: white;
+}
+
+.message-mini.orange {
+  background: linear-gradient(135deg, #fb8c00, #ffb74d);
+}
+
+.message-mini.purple {
+  background: linear-gradient(135deg, #8e24aa, #ce5bd8);
+}
+
+.message-mini.red {
+  background: linear-gradient(135deg, #d32f2f, #ef5350);
+}
+
+.mini-number {
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.mini-label {
+  font-weight: 700;
+}
+
+.btn-message {
+  background: linear-gradient(135deg, #7b1fa2, #ab47bc);
+  color: white;
 }
 
 .group-item {
@@ -403,7 +553,7 @@ onMounted(cargarDashboard)
   padding-bottom: 10px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .dashboard-page {
     padding: 10px;
   }
@@ -419,6 +569,11 @@ onMounted(cargarDashboard)
 
   .title-responsive {
     font-size: 30px;
+  }
+
+  .quick-grid,
+  .message-grid {
+    grid-template-columns: 1fr;
   }
 
   .premium-card,
