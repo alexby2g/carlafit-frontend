@@ -1,5 +1,9 @@
 {
   "appId": "com.carlafit.app",
-  "appName": "carlaFit",
-  "webDir": "www"
+  "appName": "CarlaFit",
+  "webDir": "www",
+  "server": {
+    "url": "https://carlafit-frontend.vercel.app",
+    "cleartext": false
+  }
 }

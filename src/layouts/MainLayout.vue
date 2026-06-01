@@ -8,6 +8,97 @@
           CarlaFit
         </q-toolbar-title>
 
+        <q-btn flat round dense icon="notifications" class="q-mr-sm" @click="cargarNotificaciones">
+          <q-badge
+            v-if="noLeidas > 0"
+            color="red"
+            floating
+          >
+            {{ noLeidas }}
+          </q-badge>
+
+          <q-menu
+            anchor="bottom right"
+            self="top right"
+            class="notification-menu"
+          >
+            <q-card style="width: 340px; max-width: 90vw;">
+              <q-card-section class="row items-center justify-between">
+                <div class="text-subtitle1 text-weight-bold">
+                  Notificaciones
+                </div>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="refresh"
+                  @click="cargarNotificaciones"
+                />
+              </q-card-section>
+
+              <q-separator />
+
+              <q-card-section v-if="notificaciones.length === 0" class="text-center text-grey-7">
+                No hay notificaciones
+              </q-card-section>
+
+              <q-list v-else separator>
+                <q-item
+                  v-for="notificacion in notificaciones"
+                  :key="notificacion.id"
+                  class="notification-item"
+                >
+                  <q-item-section avatar>
+                    <q-icon
+                      :name="iconoNotificacion(notificacion.tipo)"
+                      :color="colorNotificacion(notificacion.tipo)"
+                    />
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ notificacion.titulo }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      {{ notificacion.mensaje }}
+                    </q-item-label>
+
+                    <q-item-label caption class="text-grey-6">
+                      {{ formatearFecha(notificacion.fecha || notificacion.created_at) }}
+                    </q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side>
+                    <q-btn
+                      v-if="!notificacion.leida"
+                      flat
+                      dense
+                      round
+                      icon="done"
+                      color="green"
+                      @click="marcarComoLeida(notificacion.id)"
+                    >
+                      <q-tooltip>Marcar como leída</q-tooltip>
+                    </q-btn>
+
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="delete"
+                      color="red"
+                      @click="eliminarNotificacion(notificacion.id)"
+                    >
+                      <q-tooltip>Eliminar</q-tooltip>
+                    </q-btn>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card>
+          </q-menu>
+        </q-btn>
+
         <q-chip color="white" text-color="purple" icon="phone_android">
           Web + Android
         </q-chip>
@@ -81,15 +172,14 @@
           </q-item-section>
           <q-item-section>Grupos</q-item-section>
         </q-item>
+
+        <q-item clickable v-ripple to="/calendario" class="menu-item">
+          <q-item-section avatar>
+            <q-icon name="calendar_month" />
+          </q-item-section>
+          <q-item-section>Calendario</q-item-section>
+        </q-item>
       </q-list>
-
-
-      <q-item clickable v-ripple to="/calendario" class="menu-item">
-        <q-item-section avatar>
-          <q-icon name="calendar_month" />
-        </q-item-section>
-        <q-item-section>Calendario</q-item-section>
-      </q-item>
 
       <div class="drawer-card">
         <q-icon name="favorite" color="purple" size="34px" />
@@ -108,13 +198,89 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useQuasar } from 'quasar'
+import { api } from 'src/boot/axios'
+
+const $q = useQuasar()
 
 const leftDrawerOpen = ref(false)
+const notificaciones = ref([])
+
+const noLeidas = computed(() => {
+  return notificaciones.value.filter(item => !item.leida).length
+})
 
 function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
+
+async function cargarNotificaciones () {
+  try {
+    const response = await api.get('/notificaciones')
+    notificaciones.value = response.data.data || []
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function marcarComoLeida (id) {
+  try {
+    await api.put(`/notificaciones/${id}/leer`)
+    await cargarNotificaciones()
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'No se pudo marcar como leída'
+    })
+  }
+}
+
+async function eliminarNotificacion (id) {
+  try {
+    await api.delete(`/notificaciones/${id}`)
+    await cargarNotificaciones()
+
+    $q.notify({
+      type: 'positive',
+      message: 'Notificación eliminada'
+    })
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'No se pudo eliminar la notificación'
+    })
+  }
+}
+
+function iconoNotificacion (tipo) {
+  if (tipo === 'pago' || tipo === 'pago_pendiente') return 'payments'
+  if (tipo === 'inscripcion' || tipo === 'inscripcion_vencimiento') return 'event_available'
+  if (tipo === 'inscripcion_vencida') return 'warning'
+  if (tipo === 'pago_eliminado' || tipo === 'inscripcion_eliminada') return 'delete'
+  return 'notifications'
+}
+
+function colorNotificacion (tipo) {
+  if (tipo === 'pago') return 'green'
+  if (tipo === 'pago_pendiente') return 'orange'
+  if (tipo === 'inscripcion') return 'purple'
+  if (tipo === 'inscripcion_vencimiento') return 'orange'
+  if (tipo === 'inscripcion_vencida') return 'red'
+  if (tipo === 'pago_eliminado' || tipo === 'inscripcion_eliminada') return 'red'
+  return 'primary'
+}
+
+function formatearFecha (fecha) {
+  if (!fecha) return ''
+  return new Date(fecha).toLocaleString('es-BO')
+}
+
+onMounted(() => {
+  cargarNotificaciones()
+})
 </script>
 
 <style scoped>
@@ -168,5 +334,14 @@ function toggleLeftDrawer () {
 
 .app-bg {
   background: #f7f5fb;
+}
+
+.notification-menu {
+  border-radius: 16px;
+}
+
+.notification-item {
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 </style>
