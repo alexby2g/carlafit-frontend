@@ -576,6 +576,8 @@ onMounted(cargarDatos)
 
 .form-body {
   padding: 16px;
+  max-height: 65vh;
+  overflow-y: auto;
 }
 
 .form-actions {
@@ -584,9 +586,11 @@ onMounted(cargarDatos)
 }
 
 @media (max-width: 600px) {
-  .inscripciones-page {
-    padding: 10px;
+  .form-body {
+    max-height: 62vh;
+    overflow-y: auto;
   }
+}
 
   .page-header {
     align-items: stretch;
