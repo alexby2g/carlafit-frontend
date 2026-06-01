@@ -38,6 +38,10 @@ const routes = [
       {
         path: 'grupos',
         component: () => import('pages/GruposPage.vue')
+      },
+      {
+        path: 'centro-mensajes',
+        component: () => import('pages/CentroMensajesPage.vue')
       }
     ]
   },

@@ -9,31 +9,15 @@
         </q-toolbar-title>
 
         <q-btn flat round dense icon="notifications" class="q-mr-sm" @click="cargarNotificaciones">
-          <q-badge
-            v-if="noLeidas > 0"
-            color="red"
-            floating
-          >
+          <q-badge v-if="noLeidas > 0" color="red" floating>
             {{ noLeidas }}
           </q-badge>
 
-          <q-menu
-            anchor="bottom right"
-            self="top right"
-            class="notification-menu"
-          >
+          <q-menu anchor="bottom right" self="top right" class="notification-menu">
             <q-card style="width: 340px; max-width: 90vw;">
               <q-card-section class="row items-center justify-between">
-                <div class="text-subtitle1 text-weight-bold">
-                  Notificaciones
-                </div>
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="refresh"
-                  @click="cargarNotificaciones"
-                />
+                <div class="text-subtitle1 text-weight-bold">Notificaciones</div>
+                <q-btn flat dense round icon="refresh" @click="cargarNotificaciones" />
               </q-card-section>
 
               <q-separator />
@@ -43,11 +27,7 @@
               </q-card-section>
 
               <q-list v-else separator>
-                <q-item
-                  v-for="notificacion in notificaciones"
-                  :key="notificacion.id"
-                  class="notification-item"
-                >
+                <q-item v-for="notificacion in notificaciones" :key="notificacion.id" class="notification-item">
                   <q-item-section avatar>
                     <q-icon
                       :name="iconoNotificacion(notificacion.tipo)"
@@ -159,6 +139,20 @@
           <q-item-section>Pagos</q-item-section>
         </q-item>
 
+        <q-item clickable v-ripple to="/centro-mensajes" class="menu-item menu-message">
+          <q-item-section avatar>
+            <q-icon name="forum" />
+          </q-item-section>
+
+          <q-item-section>Centro de Mensajes</q-item-section>
+
+          <q-item-section side v-if="totalRecordatorios > 0">
+            <q-badge color="red" rounded>
+              {{ totalRecordatorios }}
+            </q-badge>
+          </q-item-section>
+        </q-item>
+
         <q-item clickable v-ripple to="/servicios" class="menu-item">
           <q-item-section avatar>
             <q-icon name="fitness_center" />
@@ -206,6 +200,7 @@ const $q = useQuasar()
 
 const leftDrawerOpen = ref(false)
 const notificaciones = ref([])
+const totalRecordatorios = ref(0)
 
 const noLeidas = computed(() => {
   return notificaciones.value.filter(item => !item.leida).length
@@ -219,6 +214,15 @@ async function cargarNotificaciones () {
   try {
     const response = await api.get('/notificaciones')
     notificaciones.value = response.data.data || []
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function cargarCentroMensajes () {
+  try {
+    const response = await api.get('/centro-mensajes')
+    totalRecordatorios.value = response.data.data?.resumen?.total || 0
   } catch (error) {
     console.error(error)
   }
@@ -256,19 +260,19 @@ async function eliminarNotificacion (id) {
 }
 
 function iconoNotificacion (tipo) {
-  if (tipo === 'pago' || tipo === 'pago_pendiente') return 'payments'
-  if (tipo === 'inscripcion' || tipo === 'inscripcion_vencimiento') return 'event_available'
-  if (tipo === 'inscripcion_vencida') return 'warning'
+  if (tipo === 'pago' || tipo === 'pago_pendiente' || tipo === 'recordatorio_pago') return 'payments'
+  if (tipo === 'inscripcion' || tipo === 'inscripcion_vencimiento' || tipo === 'recordatorio_inscripcion') return 'event_available'
+  if (tipo === 'inscripcion_vencida' || tipo === 'recordatorio_vencida') return 'warning'
   if (tipo === 'pago_eliminado' || tipo === 'inscripcion_eliminada') return 'delete'
   return 'notifications'
 }
 
 function colorNotificacion (tipo) {
   if (tipo === 'pago') return 'green'
-  if (tipo === 'pago_pendiente') return 'orange'
+  if (tipo === 'pago_pendiente' || tipo === 'recordatorio_pago') return 'orange'
   if (tipo === 'inscripcion') return 'purple'
-  if (tipo === 'inscripcion_vencimiento') return 'orange'
-  if (tipo === 'inscripcion_vencida') return 'red'
+  if (tipo === 'inscripcion_vencimiento' || tipo === 'recordatorio_inscripcion') return 'orange'
+  if (tipo === 'inscripcion_vencida' || tipo === 'recordatorio_vencida') return 'red'
   if (tipo === 'pago_eliminado' || tipo === 'inscripcion_eliminada') return 'red'
   return 'primary'
 }
@@ -280,6 +284,7 @@ function formatearFecha (fecha) {
 
 onMounted(() => {
   cargarNotificaciones()
+  cargarCentroMensajes()
 })
 </script>
 
@@ -315,6 +320,10 @@ onMounted(() => {
 .menu-item:hover {
   background: #f3e5f5;
   color: #7b1fa2;
+}
+
+.menu-message {
+  background: #fff3fb;
 }
 
 .q-router-link--active {
