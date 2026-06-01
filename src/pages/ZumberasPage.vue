@@ -160,7 +160,6 @@
       </template>
     </q-table>
 
-    <!-- PERFIL PREMIUM -->
     <q-dialog v-model="dialogPerfil" maximized>
       <q-card class="perfil-card">
         <q-card-section class="perfil-header">
@@ -197,6 +196,16 @@
               unelevated
               rounded
               @click="abrirMenuWhatsApp(perfil.zumbera)"
+            />
+
+            <q-btn
+              v-if="perfil.zumbera?.telefono"
+              class="perfil-action whatsapp-call"
+              icon="phone_in_talk"
+              label="Llamar por WhatsApp"
+              unelevated
+              rounded
+              @click="llamarPorWhatsApp(perfil.zumbera)"
             />
 
             <q-btn
@@ -385,7 +394,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- WHATSAPP -->
     <q-dialog v-model="dialogWhatsApp">
       <q-card class="whatsapp-card">
         <q-card-section class="whatsapp-header">
@@ -431,7 +439,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- FORMULARIO -->
     <q-dialog v-model="dialog">
       <q-card class="form-card">
         <q-card-section class="form-header">
@@ -472,7 +479,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- CONTACTOS -->
     <q-dialog v-model="dialogContactos" maximized>
       <q-card class="contactos-card">
         <q-card-section class="contactos-header">
@@ -727,6 +733,22 @@ const abrirPerfil = async (zumbera) => {
 const llamarTelefono = (telefono) => {
   if (!telefono) return
   window.open(`tel:${limpiarTelefono(telefono)}`, '_self')
+}
+
+const llamarPorWhatsApp = (zumbera) => {
+  if (!zumbera?.telefono) {
+    Notify.create({
+      type: 'warning',
+      message: 'Esta zumbera no tiene teléfono registrado'
+    })
+    return
+  }
+
+  const telefono = telefonoWhatsApp(zumbera.telefono)
+  const mensaje = `Hola ${zumbera.nombre || ''} 💜`
+
+  const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`
+  window.open(url, '_blank')
 }
 
 const abrirDialogCrear = () => {
@@ -1288,6 +1310,10 @@ onMounted(() => {
 
 .perfil-action.whatsapp {
   background: linear-gradient(135deg, #128c7e, #25d366);
+}
+
+.perfil-action.whatsapp-call {
+  background: linear-gradient(135deg, #075e54, #25d366);
 }
 
 .perfil-action.call {
