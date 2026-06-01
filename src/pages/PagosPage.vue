@@ -87,6 +87,17 @@
 
             <q-card-actions align="right" class="q-pa-sm">
               <q-btn
+                v-if="props.row.estado === 'pendiente'"
+                class="btn-confirm"
+                icon="check_circle"
+                label="Confirmar Pago"
+                dense
+                unelevated
+                rounded
+                @click="confirmarPago(props.row)"
+              />
+
+              <q-btn
                 class="btn-edit"
                 icon="edit"
                 label="Editar"
@@ -134,8 +145,39 @@
 
       <template v-slot:body-cell-acciones="props">
         <q-td :props="props" class="q-gutter-xs">
-          <q-btn dense round unelevated color="blue-7" icon="edit" @click="abrirDialogEditar(props.row)" />
-          <q-btn dense round unelevated color="red-7" icon="delete" @click="confirmarEliminar(props.row)" />
+          <q-btn
+            v-if="props.row.estado === 'pendiente'"
+            dense
+            round
+            unelevated
+            color="green"
+            icon="check_circle"
+            @click="confirmarPago(props.row)"
+          >
+            <q-tooltip>Confirmar pago</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            dense
+            round
+            unelevated
+            color="blue-7"
+            icon="edit"
+            @click="abrirDialogEditar(props.row)"
+          >
+            <q-tooltip>Editar</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            dense
+            round
+            unelevated
+            color="red-7"
+            icon="delete"
+            @click="confirmarEliminar(props.row)"
+          >
+            <q-tooltip>Eliminar</q-tooltip>
+          </q-btn>
         </q-td>
       </template>
     </q-table>
@@ -261,10 +303,8 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { Notify, Dialog, useQuasar } from 'quasar'
+import { Notify, Dialog } from 'quasar'
 import axios from 'axios'
-
-const $q = useQuasar()
 
 const API_PAGOS = 'https://carlafit-backend.onrender.com/api/pagos'
 const API_ZUMBERAS = 'https://carlafit-backend.onrender.com/api/zumberas'
@@ -278,7 +318,7 @@ const pagos = ref([])
 const zumberas = ref([])
 const servicios = ref([])
 
-const metodosPago = ['efectivo', 'qr', 'transferencia', 'tarjeta']
+const metodosPago = ['efectivo', 'qr', 'transferencia']
 const estadosPago = ['pagado', 'pendiente']
 
 const form = ref({
@@ -327,15 +367,23 @@ const formatoMonto = (valor) => {
 }
 
 const cargarDatos = async () => {
-  const [resPagos, resZumberas, resServicios] = await Promise.all([
-    axios.get(API_PAGOS),
-    axios.get(API_ZUMBERAS),
-    axios.get(API_SERVICIOS)
-  ])
+  try {
+    const [resPagos, resZumberas, resServicios] = await Promise.all([
+      axios.get(API_PAGOS),
+      axios.get(API_ZUMBERAS),
+      axios.get(API_SERVICIOS)
+    ])
 
-  pagos.value = resPagos.data.data
-  zumberas.value = resZumberas.data.data
-  servicios.value = resServicios.data.data
+    pagos.value = resPagos.data.data || []
+    zumberas.value = resZumberas.data.data || []
+    servicios.value = resServicios.data.data || []
+  } catch (error) {
+    console.error(error)
+    Notify.create({
+      type: 'negative',
+      message: 'Error al cargar datos'
+    })
+  }
 }
 
 const aplicarServicio = () => {
@@ -408,28 +456,77 @@ const guardar = async () => {
     observacion: form.value.observacion
   }
 
-  if (modoEditar.value) {
-    await axios.put(`${API_PAGOS}/${form.value.id}`, datos)
-    Notify.create({ type: 'positive', message: 'Pago actualizado correctamente' })
-  } else {
-    await axios.post(API_PAGOS, datos)
-    Notify.create({ type: 'positive', message: 'Pago registrado correctamente' })
-  }
+  try {
+    if (modoEditar.value) {
+      await axios.put(`${API_PAGOS}/${form.value.id}`, datos)
+      Notify.create({ type: 'positive', message: 'Pago actualizado correctamente' })
+    } else {
+      await axios.post(API_PAGOS, datos)
+      Notify.create({ type: 'positive', message: 'Pago registrado correctamente' })
+    }
 
-  dialog.value = false
-  cargarDatos()
+    dialog.value = false
+    await cargarDatos()
+  } catch (error) {
+    console.error(error)
+    Notify.create({
+      type: 'negative',
+      message: 'No se pudo guardar el pago'
+    })
+  }
+}
+
+const confirmarPago = (pago) => {
+  Dialog.create({
+    title: 'Confirmar pago',
+    message: `¿Deseas marcar como pagado el pago de ${pago.zumbera?.nombre || 'esta zumbera'} por Bs ${formatoMonto(pago.monto)}?`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await axios.put(`${API_PAGOS}/${pago.id}`, {
+        zumbera_id: pago.zumbera_id,
+        monto: pago.monto,
+        fecha_pago: pago.fecha_pago,
+        metodo_pago: pago.metodo_pago || 'efectivo',
+        estado: 'pagado',
+        observacion: pago.observacion
+      })
+
+      Notify.create({
+        type: 'positive',
+        message: 'Pago confirmado correctamente'
+      })
+
+      await cargarDatos()
+    } catch (error) {
+      console.error(error)
+      Notify.create({
+        type: 'negative',
+        message: 'No se pudo confirmar el pago'
+      })
+    }
+  })
 }
 
 const confirmarEliminar = (pago) => {
   Dialog.create({
     title: 'Confirmar eliminación',
-    message: `¿Seguro que deseas eliminar el pago de ${pago.zumbera?.nombre || 'esta zumbera'} por Bs ${pago.monto}?`,
+    message: `¿Seguro que deseas eliminar el pago de ${pago.zumbera?.nombre || 'esta zumbera'} por Bs ${formatoMonto(pago.monto)}?`,
     cancel: true,
     persistent: true
   }).onOk(async () => {
-    await axios.delete(`${API_PAGOS}/${pago.id}`)
-    Notify.create({ type: 'positive', message: 'Pago eliminado correctamente' })
-    cargarDatos()
+    try {
+      await axios.delete(`${API_PAGOS}/${pago.id}`)
+      Notify.create({ type: 'positive', message: 'Pago eliminado correctamente' })
+      await cargarDatos()
+    } catch (error) {
+      console.error(error)
+      Notify.create({
+        type: 'negative',
+        message: 'No se pudo eliminar el pago'
+      })
+    }
   })
 }
 
@@ -454,6 +551,11 @@ onMounted(cargarDatos)
   background: linear-gradient(135deg, #0b8f3a, #43a047);
   color: white;
   box-shadow: 0 8px 18px rgba(11, 143, 58, 0.35);
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #1b5e20, #43a047);
+  color: white;
 }
 
 .btn-edit {
