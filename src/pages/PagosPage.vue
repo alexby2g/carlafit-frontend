@@ -6,18 +6,29 @@
           💰 Pagos
         </div>
         <div class="text-grey-7">
-          Historial de pagos y control de ingresos
+          Historial de pagos, QR y control de ingresos
         </div>
       </div>
 
-      <q-btn
-        class="btn-primary"
-        icon="add"
-        label="Nuevo Pago"
-        unelevated
-        rounded
-        @click="abrirDialogCrear"
-      />
+      <div class="header-actions">
+        <q-btn
+          class="btn-qr"
+          icon="qr_code_2"
+          label="Ver QR"
+          unelevated
+          rounded
+          @click="dialogQR = true"
+        />
+
+        <q-btn
+          class="btn-primary"
+          icon="add"
+          label="Nuevo Pago"
+          unelevated
+          rounded
+          @click="abrirDialogCrear"
+        />
+      </div>
     </div>
 
     <q-input
@@ -73,7 +84,9 @@
 
                 <div class="col-6">
                   <div class="info-label">Método</div>
-                  <div class="info-value">{{ props.row.metodo_pago }}</div>
+                  <div class="info-value">
+                    {{ props.row.metodo_pago }}
+                  </div>
                 </div>
 
                 <div class="col-12">
@@ -87,10 +100,21 @@
 
             <q-card-actions align="right" class="q-pa-sm">
               <q-btn
+                v-if="props.row.metodo_pago === 'qr'"
+                class="btn-qr-small"
+                icon="qr_code_2"
+                label="QR"
+                dense
+                unelevated
+                rounded
+                @click="dialogQR = true"
+              />
+
+              <q-btn
                 v-if="props.row.estado === 'pendiente'"
                 class="btn-confirm"
                 icon="check_circle"
-                label="Confirmar Pago"
+                label="Confirmar"
                 dense
                 unelevated
                 rounded
@@ -135,6 +159,14 @@
         </q-td>
       </template>
 
+      <template v-slot:body-cell-metodo_pago="props">
+        <q-td :props="props">
+          <q-badge :color="colorMetodo(props.row.metodo_pago)">
+            {{ props.row.metodo_pago }}
+          </q-badge>
+        </q-td>
+      </template>
+
       <template v-slot:body-cell-estado="props">
         <q-td :props="props">
           <q-badge :color="props.row.estado === 'pagado' ? 'positive' : 'warning'">
@@ -145,6 +177,18 @@
 
       <template v-slot:body-cell-acciones="props">
         <q-td :props="props" class="q-gutter-xs">
+          <q-btn
+            v-if="props.row.metodo_pago === 'qr'"
+            dense
+            round
+            unelevated
+            color="purple"
+            icon="qr_code_2"
+            @click="dialogQR = true"
+          >
+            <q-tooltip>Ver QR</q-tooltip>
+          </q-btn>
+
           <q-btn
             v-if="props.row.estado === 'pendiente'"
             dense
@@ -181,6 +225,48 @@
         </q-td>
       </template>
     </q-table>
+
+    <q-dialog v-model="dialogQR">
+      <q-card class="qr-card">
+        <q-card-section class="qr-header">
+          <div>
+            <div class="text-h6 text-weight-bold">💜 Pago por QR</div>
+            <div class="text-caption text-purple-1">
+              Escanea para pagar a CarlaFit
+            </div>
+          </div>
+
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="text-center">
+          <q-img
+            src="~assets/qr-carla-yape.png"
+            class="qr-image"
+            fit="contain"
+          />
+
+          <div class="text-h6 text-weight-bold q-mt-md">
+            Carla Andrea Guzman Ribera
+          </div>
+
+          <div class="text-grey-7">
+            Método: QR / Yape Bs
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="center" class="q-pa-md">
+          <q-btn
+            class="btn-primary"
+            icon="add"
+            label="Registrar pago QR"
+            unelevated
+            rounded
+            @click="abrirPagoQR"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <q-dialog v-model="dialog" persistent>
       <q-card class="form-card">
@@ -275,6 +361,18 @@
             </div>
           </div>
 
+          <q-banner
+            v-if="form.metodo_pago === 'qr'"
+            rounded
+            class="qr-banner q-mb-sm"
+          >
+            <template v-slot:avatar>
+              <q-icon name="qr_code_2" color="purple" />
+            </template>
+            El pago será registrado como QR. Puedes mostrar el QR antes de guardar.
+            <q-btn flat dense color="purple" label="Ver QR" @click="dialogQR = true" />
+          </q-banner>
+
           <q-input
             v-model="form.observacion"
             label="Observación"
@@ -311,6 +409,7 @@ const API_ZUMBERAS = 'https://carlafit-backend.onrender.com/api/zumberas'
 const API_SERVICIOS = 'https://carlafit-backend.onrender.com/api/servicios'
 
 const dialog = ref(false)
+const dialogQR = ref(false)
 const modoEditar = ref(false)
 const filtro = ref('')
 
@@ -366,6 +465,12 @@ const formatoMonto = (valor) => {
   return Number(valor || 0).toFixed(2)
 }
 
+const colorMetodo = (metodo) => {
+  if (metodo === 'qr') return 'purple'
+  if (metodo === 'transferencia') return 'blue'
+  return 'green'
+}
+
 const cargarDatos = async () => {
   try {
     const [resPagos, resZumberas, resServicios] = await Promise.all([
@@ -388,7 +493,6 @@ const cargarDatos = async () => {
 
 const aplicarServicio = () => {
   const servicio = servicioSeleccionado.value
-
   if (!servicio) return
 
   form.value.monto = Number(servicio.precio) || 0
@@ -412,6 +516,14 @@ const abrirDialogCrear = () => {
   }
 
   dialog.value = true
+}
+
+const abrirPagoQR = () => {
+  dialogQR.value = false
+  abrirDialogCrear()
+  form.value.metodo_pago = 'qr'
+  form.value.estado = 'pendiente'
+  form.value.observacion = 'Pago por QR pendiente de confirmación'
 }
 
 const abrirDialogEditar = (pago) => {
@@ -487,7 +599,7 @@ const confirmarPago = (pago) => {
       await axios.put(`${API_PAGOS}/${pago.id}`, {
         zumbera_id: pago.zumbera_id,
         monto: pago.monto,
-        fecha_pago: pago.fecha_pago,
+        fecha_pago: hoy(),
         metodo_pago: pago.metodo_pago || 'efectivo',
         estado: 'pagado',
         observacion: pago.observacion
@@ -546,11 +658,23 @@ onMounted(cargarDatos)
   gap: 16px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .btn-primary,
 .btn-save {
   background: linear-gradient(135deg, #0b8f3a, #43a047);
   color: white;
   box-shadow: 0 8px 18px rgba(11, 143, 58, 0.35);
+}
+
+.btn-qr,
+.btn-qr-small {
+  background: linear-gradient(135deg, #7b1fa2, #ab47bc);
+  color: white;
 }
 
 .btn-confirm {
@@ -603,6 +727,33 @@ onMounted(cargarDatos)
   border: 1px solid #a5d6a7;
 }
 
+.qr-banner {
+  background: #f3e5f5;
+  color: #4a148c;
+}
+
+.qr-card {
+  width: 430px;
+  max-width: 94vw;
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.qr-header {
+  background: linear-gradient(135deg, #7b1fa2, #ab47bc);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qr-image {
+  width: 100%;
+  max-width: 330px;
+  border-radius: 22px;
+  border: 6px solid #7b1fa2;
+}
+
 .form-card {
   width: 450px;
   max-width: 94vw;
@@ -637,11 +788,16 @@ onMounted(cargarDatos)
     flex-direction: column;
   }
 
+  .header-actions {
+    flex-direction: column;
+  }
+
   .title-responsive {
     font-size: 32px;
   }
 
-  .btn-primary {
+  .btn-primary,
+  .btn-qr {
     width: 100%;
   }
 
