@@ -3,16 +3,14 @@
     <div class="hero-card q-mb-lg">
       <div class="hero-badge">Gestión de zumberas</div>
 
-      <div class="hero-title">
-        👩 Zumberas CarlaFit
-      </div>
+      <div class="hero-title">👩 Zumberas CarlaFit</div>
 
       <div class="hero-subtitle">
         Administra alumnas, importa contactos y envía mensajes por WhatsApp
       </div>
 
       <div class="hero-actions">
-        <q-btn class="hero-btn" icon="contacts" label="Importar contacto" @click="abrirDialogCrearConContacto" />
+        <q-btn class="hero-btn" icon="contacts" label="Importar contactos" @click="abrirDialogCrearConContacto" />
         <q-btn class="hero-btn" icon="add" label="Nueva zumbera" @click="abrirDialogCrear" />
         <q-btn class="hero-btn" icon="refresh" label="Actualizar" @click="cargarZumberas" />
       </div>
@@ -152,10 +150,11 @@
           <q-btn
             class="btn-contact q-mb-md"
             icon="contacts"
-            label="Importar contacto del teléfono"
+            label="Ver contactos del teléfono"
             unelevated
             rounded
-            @click="importarContacto"
+            :loading="cargandoContactos"
+            @click="cargarContactosTelefono"
           />
 
           <q-input v-model="form.nombre" label="Nombre" outlined dense class="q-mb-md" />
@@ -168,6 +167,87 @@
         <q-card-actions class="form-actions">
           <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
           <q-btn class="btn-save" icon="save" label="Guardar" unelevated rounded @click="guardar" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="dialogContactos" maximized>
+      <q-card class="contactos-card">
+        <q-card-section class="contactos-header">
+          <div>
+            <div class="text-h5 text-weight-bold">
+              📱 Importar contactos
+            </div>
+            <div class="text-subtitle2">
+              Selecciona un contacto del teléfono para guardarlo como zumbera
+            </div>
+          </div>
+
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <q-input
+            v-model="filtroContactos"
+            outlined
+            rounded
+            clearable
+            debounce="300"
+            placeholder="Buscar por nombre o teléfono"
+            class="contact-search q-mb-md"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" color="purple" />
+            </template>
+          </q-input>
+
+          <div class="chips-row q-mb-md">
+            <q-chip color="purple" text-color="white" icon="contacts">
+              {{ contactosTelefono.length }} contacto(s)
+            </q-chip>
+
+            <q-chip color="green" text-color="white" icon="person_add">
+              {{ contactosFiltrados.length }} visible(s)
+            </q-chip>
+          </div>
+
+          <q-list bordered separator class="contactos-list">
+            <q-item
+              v-for="contacto in contactosFiltrados"
+              :key="contacto.id"
+              clickable
+              v-ripple
+              @click="seleccionarContacto(contacto)"
+            >
+              <q-item-section avatar>
+                <q-avatar color="purple" text-color="white" icon="person" />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-bold">
+                  {{ contacto.nombre }}
+                </q-item-label>
+                <q-item-label caption>
+                  {{ contacto.telefono }}
+                </q-item-label>
+              </q-item-section>
+
+              <q-item-section side>
+                <q-icon name="add_circle" color="green" size="30px" />
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="contactosFiltrados.length === 0">
+              <q-item-section class="text-center text-grey-7 q-pa-lg">
+                No se encontraron contactos
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions class="contactos-actions">
+          <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
+          <q-btn class="btn-reload" icon="refresh" label="Volver a cargar" unelevated rounded @click="cargarContactosTelefono" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -184,9 +264,13 @@ const $q = useQuasar()
 const API_URL = 'https://carlafit-backend.onrender.com/api/zumberas'
 
 const dialog = ref(false)
+const dialogContactos = ref(false)
 const modoEditar = ref(false)
 const zumberas = ref([])
+const contactosTelefono = ref([])
 const filtro = ref('')
+const filtroContactos = ref('')
+const cargandoContactos = ref(false)
 
 const form = ref({
   id: null,
@@ -212,7 +296,6 @@ const columns = [
 
 const zumberasFiltradas = computed(() => {
   const texto = filtro.value.toLowerCase().trim()
-
   if (!texto) return zumberas.value
 
   return zumberas.value.filter(z => {
@@ -225,21 +308,37 @@ const zumberasFiltradas = computed(() => {
   })
 })
 
+const contactosFiltrados = computed(() => {
+  const texto = filtroContactos.value.toLowerCase().trim()
+  if (!texto) return contactosTelefono.value
+
+  return contactosTelefono.value.filter(c => {
+    return (
+      String(c.nombre || '').toLowerCase().includes(texto) ||
+      String(c.telefono || '').toLowerCase().includes(texto)
+    )
+  })
+})
+
 const totalZumberas = computed(() => zumberas.value.length)
 const totalActivas = computed(() => zumberas.value.filter(z => z.activo).length)
 const totalConTelefono = computed(() => zumberas.value.filter(z => z.telefono).length)
 
 const limpiarTelefono = (telefono) => {
   return String(telefono || '')
+    .trim()
     .replace(/\s+/g, '')
     .replace(/-/g, '')
     .replace(/\(/g, '')
     .replace(/\)/g, '')
-    .replace(/\+/g, '')
 }
 
 const telefonoWhatsApp = (telefono) => {
-  const limpio = limpiarTelefono(telefono)
+  let limpio = limpiarTelefono(telefono)
+
+  if (limpio.startsWith('+')) {
+    limpio = limpio.substring(1)
+  }
 
   if (limpio.startsWith('591')) {
     return limpio
@@ -250,6 +349,25 @@ const telefonoWhatsApp = (telefono) => {
   }
 
   return `591${limpio}`
+}
+
+const obtenerNombreContacto = (contacto) => {
+  return (
+    contacto.name?.display ||
+    contacto.name?.given ||
+    contacto.displayName ||
+    contacto.name?.family ||
+    'Sin nombre'
+  )
+}
+
+const obtenerTelefonoContacto = (contacto) => {
+  return (
+    contacto.phones?.[0]?.number ||
+    contacto.phoneNumbers?.[0]?.number ||
+    contacto.phones?.[0]?.value ||
+    ''
+  )
 }
 
 const cargarZumberas = async () => {
@@ -281,7 +399,7 @@ const abrirDialogCrear = () => {
 
 const abrirDialogCrearConContacto = async () => {
   abrirDialogCrear()
-  await importarContacto()
+  await cargarContactosTelefono()
 }
 
 const abrirDialogEditar = (zumbera) => {
@@ -298,8 +416,10 @@ const abrirDialogEditar = (zumbera) => {
   dialog.value = true
 }
 
-const importarContacto = async () => {
+const cargarContactosTelefono = async () => {
   try {
+    cargandoContactos.value = true
+
     const { Contacts } = await import('@capacitor-community/contacts')
 
     const permiso = await Contacts.requestPermissions()
@@ -312,48 +432,49 @@ const importarContacto = async () => {
       return
     }
 
-    const resultado = await Contacts.pickContact({
+    const resultado = await Contacts.getContacts({
       projection: {
         name: true,
         phones: true
       }
     })
 
-    const contacto = resultado.contact
+    contactosTelefono.value = (resultado.contacts || [])
+      .map((contacto, index) => {
+        const nombre = obtenerNombreContacto(contacto)
+        const telefono = limpiarTelefono(obtenerTelefonoContacto(contacto))
 
-    if (!contacto) {
-      Notify.create({
-        type: 'warning',
-        message: 'No se seleccionó ningún contacto'
+        return {
+          id: `${nombre}-${telefono}-${index}`,
+          nombre,
+          telefono
+        }
       })
-      return
-    }
+      .filter(c => c.telefono)
 
-    const nombre =
-      contacto.name?.display ||
-      contacto.name?.given ||
-      contacto.displayName ||
-      ''
-
-    const telefono =
-      contacto.phones?.[0]?.number ||
-      contacto.phoneNumbers?.[0]?.number ||
-      ''
-
-    form.value.nombre = nombre || form.value.nombre
-    form.value.telefono = limpiarTelefono(telefono)
-
-    Notify.create({
-      type: 'positive',
-      message: 'Contacto importado correctamente'
-    })
+    filtroContactos.value = ''
+    dialogContactos.value = true
   } catch (error) {
     console.error(error)
     Notify.create({
-      type: 'warning',
-      message: 'No se pudo importar el contacto'
+      type: 'negative',
+      message: 'No se pudieron cargar los contactos'
     })
+  } finally {
+    cargandoContactos.value = false
   }
+}
+
+const seleccionarContacto = (contacto) => {
+  form.value.nombre = contacto.nombre
+  form.value.telefono = contacto.telefono
+
+  dialogContactos.value = false
+
+  Notify.create({
+    type: 'positive',
+    message: 'Contacto importado correctamente'
+  })
 }
 
 const guardar = async () => {
@@ -410,9 +531,7 @@ const enviarWhatsApp = (zumbera) => {
   }
 
   const telefono = telefonoWhatsApp(zumbera.telefono)
-
   const mensaje = `Hola ${zumbera.nombre}, te saludamos de CarlaFit 💜. Queríamos recordarte que estamos felices de acompañarte en tu entrenamiento.`
-
   const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`
 
   window.open(url, '_blank')
@@ -572,7 +691,8 @@ onMounted(() => {
   background: #25d366;
 }
 
-.search-box {
+.search-box,
+.contact-search {
   background: white;
   border-radius: 18px;
 }
@@ -606,6 +726,11 @@ onMounted(() => {
   color: white;
 }
 
+.btn-reload {
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  color: white;
+}
+
 .mobile-card {
   border-radius: 20px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
@@ -624,7 +749,8 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.form-header {
+.form-header,
+.contactos-header {
   background: linear-gradient(135deg, #7b1fa2, #ab47bc);
   color: white;
   display: flex;
@@ -640,6 +766,30 @@ onMounted(() => {
 .form-actions {
   padding: 14px 22px 22px;
   justify-content: flex-end;
+}
+
+.contactos-card {
+  background: #fff7fd;
+}
+
+.contactos-list {
+  border-radius: 20px;
+  overflow: hidden;
+  background: white;
+}
+
+.chips-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.contactos-actions {
+  padding: 18px;
+  justify-content: space-between;
+  position: sticky;
+  bottom: 0;
+  background: #fff7fd;
 }
 
 @media (max-width: 700px) {
@@ -678,6 +828,14 @@ onMounted(() => {
     position: sticky;
     bottom: 0;
     background: white;
+  }
+
+  .contactos-actions {
+    flex-direction: column;
+  }
+
+  .contactos-actions .q-btn {
+    width: 100%;
   }
 }
 </style>
